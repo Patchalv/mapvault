@@ -46,6 +46,7 @@ type AnalyticsEvents = {
   purchase_started: Record<string, never>;
   purchase_completed: Record<string, never>;
   purchase_failed: { reason: 'cancelled' | 'error' };
+  review_prompted: { trigger: 'place_visited' | 'places_saved_milestone' | 'directions_after_filter' };
 };
 
 let posthogInstance: PostHog | null = null;

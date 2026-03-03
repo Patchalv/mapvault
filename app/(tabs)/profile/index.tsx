@@ -11,6 +11,8 @@ import { logOutUser } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { router } from "expo-router";
+import * as StoreReview from "expo-store-review";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -40,6 +42,11 @@ export default function ProfileScreen() {
   const { activeMapId } = useActiveMap();
   const { mutate: createMap, isPending: isCreating } = useCreateMap();
   const { handleMutationError } = useFreemiumGate();
+
+  const [hasStoreAction, setHasStoreAction] = useState(false);
+  useEffect(() => {
+    StoreReview.hasAction().then(setHasStoreAction).catch(() => {});
+  }, []);
 
   const isLoading = isLoadingProfile || isLoadingMaps;
   const isError = isErrorProfile || isErrorMaps;
@@ -262,6 +269,21 @@ export default function ProfileScreen() {
           </Text>
           <Text className="mt-2 text-xs font-semibold text-amber-600">
             Learn more →
+          </Text>
+        </Pressable>
+      )}
+
+      {/* Rate MapVault */}
+      {hasStoreAction && (
+        <Pressable
+          onPress={() => {
+            const url = StoreReview.storeUrl();
+            if (url) Linking.openURL(url);
+          }}
+          className="mb-3 items-center rounded-xl border border-gray-200 bg-gray-50 py-3"
+        >
+          <Text className="text-base font-semibold text-gray-700">
+            Rate MapVault
           </Text>
         </Pressable>
       )}

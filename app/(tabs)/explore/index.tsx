@@ -17,6 +17,7 @@ import { useUpdatePlaceTags } from '@/hooks/use-update-place-tags';
 import { useDeletePlace } from '@/hooks/use-delete-place';
 import { useUpdatePlaceNote } from '@/hooks/use-update-place-note';
 import { useOnboarding } from '@/hooks/use-onboarding';
+import { useAppReview } from '@/hooks/use-app-review';
 import { track } from '@/lib/analytics';
 import { ExploreHeader } from '@/components/explore-header/explore-header';
 import { MapMarkers } from '@/components/map-markers/map-markers';
@@ -60,6 +61,7 @@ export default function ExploreScreen() {
   const { mutate: updatePlaceTag } = useUpdatePlaceTags(activeMapId);
   const { mutate: deletePlace } = useDeletePlace(activeMapId);
   const { mutate: updatePlaceNote } = useUpdatePlaceNote(activeMapId);
+  const { maybeRequestReview } = useAppReview();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('map');
@@ -274,8 +276,11 @@ export default function ExploreScreen() {
   const handleToggleVisited = useCallback(
     (mapPlaceId: string, visited: boolean) => {
       toggleVisited({ mapPlaceId, visited });
+      if (visited) {
+        setTimeout(() => maybeRequestReview('place_visited'), 1500);
+      }
     },
-    [toggleVisited]
+    [toggleVisited, maybeRequestReview]
   );
 
   const handleTogglePlaceTag = useCallback(
