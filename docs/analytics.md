@@ -107,24 +107,25 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 |---|---|---|---|
 | `tag_created` | Tag created (onSuccess) | `map_id`, `tag_name` | `hooks/use-manage-tags.ts` |
 
-### Sharing (3 events)
+### Sharing & Roles (4 events)
 
 | Event | When | Properties | File |
 |---|---|---|---|
 | `invite_link_created` | Invite created (onSuccess) | `map_id` | `hooks/use-create-invite.ts` |
 | `invite_link_shared` | Share sheet completed successfully | `map_id` | `components/invite-section/invite-section.tsx` |
 | `invite_accepted` | Invite accepted (onSuccess) | `map_id` | `app/invite/[token].tsx` |
+| `member_role_changed` | Member role updated (onSuccess) | `map_id`, `new_role` | `hooks/use-update-member-role.ts` |
 
 ### Payments (4 events)
 
 | Event | When | Properties | File |
 |---|---|---|---|
-| `paywall_viewed` | Paywall screen mounts | `trigger`: `'map_limit' \| 'place_limit' \| 'profile_tap'` | `app/(tabs)/profile/paywall.tsx` |
+| `paywall_viewed` | Paywall screen mounts | `trigger`: `'map_limit' \| 'place_limit' \| 'invite_limit' \| 'profile_tap' \| 'profile_cta'` | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_started` | User taps Subscribe | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_completed` | Purchase succeeds | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_failed` | Purchase fails or is cancelled | `reason`: `'cancelled' \| 'error'` | `app/(tabs)/profile/paywall.tsx` |
 
-**Total: 24 events**
+**Total: 25 events**
 
 ## Rules for Adding New Events
 

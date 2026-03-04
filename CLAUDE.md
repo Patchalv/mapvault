@@ -95,7 +95,7 @@ functions/ ← Edge Functions
 
 - `profiles` — extends auth.users, has entitlement (free/premium) and active_map_id
 - `maps` — user-created collections, accessed via map_members
-- `map_members` — junction: profiles <-> maps, with role (owner/editor)
+- `map_members` — junction: profiles <-> maps, with role (owner/contributor/member)
 - `tags` — per-map definitions with emoji/color
 - `places` — shared Google reference data (deduplicated by google_place_id)
 - `map_places` — a place saved to a specific map (core entity)
@@ -129,6 +129,7 @@ functions/ ← Edge Functions
 - `docs/sentry.md` — Sentry error tracking, config, and MCP tools guide
 - `docs/app-reviews.md` — In-app review prompts, triggers, and feature flag
 - `docs/universal-links-website.md` — AASA, assetlinks.json, and invite fallback page specs for mapvault.app
+- `docs/freemium-roles.md` — Freemium tiers, three-role system, and permission matrices
 - Read these before starting any new milestone
 
 ## Skills & Commands

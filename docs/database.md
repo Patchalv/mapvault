@@ -65,14 +65,14 @@ Junction table controlling map access. Membership = access.
 | id | uuid | PK, default `gen_random_uuid()` | |
 | map_id | uuid | NOT NULL, FK → maps (CASCADE) | |
 | user_id | uuid | NOT NULL, FK → profiles | |
-| role | text | NOT NULL, default `'editor'` | `'owner'` or `'editor'` |
+| role | text | NOT NULL, default `'contributor'`, CHECK | `'owner'`, `'contributor'`, or `'member'` |
 | joined_at | timestamptz | NOT NULL, default `now()` | |
 
 **Unique:** `(map_id, user_id)`
 
 **Indexes:** `idx_map_members_user_id`, `idx_map_members_map_id`
 
-**RLS:** Members can SELECT membership for maps they belong to (via `is_map_member()` helper to avoid recursion). Users can INSERT their own row. Users can DELETE their own row (leave a map).
+**RLS:** Members can SELECT membership for maps they belong to (via `is_map_member()` helper to avoid recursion). Users can INSERT their own row. Users can DELETE their own row (leave a map). Owners can UPDATE non-owner member roles (contributor ↔ member).
 
 ### tags
 
@@ -92,7 +92,7 @@ Per-map tag definitions with emoji and color.
 
 **Indexes:** `idx_tags_map_id`
 
-**RLS:** Map members can SELECT, INSERT, UPDATE, and DELETE.
+**RLS:** All map members can SELECT. Owners and contributors can INSERT, UPDATE, and DELETE.
 
 ### places
 
@@ -128,7 +128,7 @@ A place saved to a specific map. This is the core user-facing entity — it conn
 
 **Indexes:** `idx_map_places_map_id`, `idx_map_places_place_id`
 
-**RLS:** Map members can SELECT, INSERT, UPDATE, and DELETE.
+**RLS:** All map members can SELECT. Owners and contributors can INSERT, UPDATE, and DELETE.
 
 ### map_place_tags
 
@@ -139,7 +139,7 @@ Junction table associating tags with saved places.
 | map_place_id | uuid | PK, FK → map_places (CASCADE) | |
 | tag_id | uuid | PK, FK → tags (CASCADE) | |
 
-**RLS:** Map members can SELECT, INSERT, and DELETE (checked via `map_places` → `map_members` join).
+**RLS:** All map members can SELECT. Owners and contributors can INSERT and DELETE (checked via `map_places` → `map_members` join).
 
 ### place_visits
 
@@ -163,13 +163,13 @@ Invite tokens for sharing maps with other users.
 | map_id | uuid | NOT NULL, FK → maps (CASCADE) | |
 | token | text | NOT NULL, UNIQUE | Random invite token |
 | created_by | uuid | NOT NULL, FK → profiles | |
-| role | text | NOT NULL, default `'editor'` | Role granted to accepter |
+| role | text | NOT NULL, default `'contributor'`, CHECK | `'contributor'` or `'member'` — role granted to accepter |
 | expires_at | timestamptz | nullable | Null = never expires |
 | max_uses | integer | nullable | Null = unlimited |
 | use_count | integer | NOT NULL, default `0` | Incremented on accept |
 | created_at | timestamptz | NOT NULL, default `now()` | |
 
-**RLS:** Map members can SELECT and INSERT invites for their maps.
+**RLS:** Map members can SELECT invites for their maps. Owners can INSERT (enforced via `create-invite` Edge Function which checks premium entitlement).
 
 ## Triggers
 
@@ -215,3 +215,4 @@ SECURITY DEFINER function that checks if the current user is a member of a map. 
 | `20260222000002_allow_members_to_leave_maps.sql` | Members can delete own membership |
 | `20260222000003_add_user_cleanup_trigger.sql` | `handle_user_deleted()` trigger |
 | `20260223000001_cleanup_orphaned_places_on_delete.sql` | Add orphaned places cleanup to deletion trigger |
+| `20260304000001_freemium_roles_redesign.sql` | Rename `editor` → `contributor`, add `member` role, restrict RLS to owner/contributor writes, add CHECK constraints |
