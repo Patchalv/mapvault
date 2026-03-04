@@ -193,7 +193,7 @@ Currently uses `AsyncStorage` (unencrypted on iOS). Low risk since tokens are sh
 
 These areas were reviewed and found to be properly implemented:
 
-- **RLS on all 10 tables** — policies correctly scope data to map members, enforce owner/editor roles
+- **RLS on all 10 tables** — policies correctly scope data to map members, enforce owner/contributor/member roles
 - **Freemium limits** — enforced server-side in Edge Functions, not bypassable from client
 - **OAuth & Apple Sign-In** — standard Supabase flows, proper token handling
 - **Invite tokens** — UUID v4 (128-bit entropy), expiration, max-use, duplicate checks

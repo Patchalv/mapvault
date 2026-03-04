@@ -10,7 +10,7 @@ Key PRD requirements that drive technical decisions, with complexity notes.
 | Interactive map with custom pins         | Mapbox SDK, custom markers with emoji/color per tag                                                              | Medium — Mapbox setup, marker rendering performance           |
 | Filter/search saved places on map        | Client-side filtering on cached data, real-time UI updates                                                       | Low — TanStack Query + local filter state                     |
 | Shared maps with per-user visited status | Data model must separate shared data (tags, notes) from personal data (visited). RLS policies for access control | High — most complex part of the schema and RLS                |
-| Freemium gating (1 map / 50 places free) | Server-side enforcement via Edge Functions. Cannot trust client                                                  | Medium — Edge Functions + RevenueCat webhook                  |
+| Freemium gating (1 map / 20 places free) | Server-side enforcement via Edge Functions. Cannot trust client                                                  | Medium — Edge Functions + RevenueCat webhook                  |
 | Map sharing via invite links             | Deep linking (Expo), invite token generation, Edge Function to validate and add member                           | Medium — deep link handling on iOS can be tricky              |
 | Map/List view toggle                     | Two views of the same data, shared filter state                                                                  | Low — same data source, different render                      |
 | Offline browsing (v1.1)                  | Data layer must support caching. Not built now but architecture shouldn't prevent it                             | Low for now — TanStack Query's cache is a good starting point |
@@ -127,7 +127,7 @@ Junction table controlling who has access to which map.
 | id        | uuid, PK                             | no       | gen_random_uuid() |                                                      |
 | map_id    | uuid, FK → maps.id ON DELETE CASCADE | no       | —                 |                                                      |
 | user_id   | uuid, FK → profiles.id               | no       | —                 |                                                      |
-| role      | text                                 | no       | 'editor'          | 'owner' or 'editor'. Future: 'viewer', 'contributor' |
+| role      | text                                 | no       | 'contributor'     | 'owner', 'contributor', or 'member' (see `docs/freemium-roles.md`) |
 | joined_at | timestamptz                          | no       | now()             |                                                      |
 
 **Constraints:** UNIQUE on (map_id, user_id).
@@ -409,7 +409,7 @@ Invite links for shared maps.
 | map_id     | uuid, FK → maps.id ON DELETE CASCADE | no       | —                 |                                                              |
 | token      | text                                 | no       | —                 | Short random string for the URL                              |
 | created_by | uuid, FK → profiles.id               | no       | —                 |                                                              |
-| role       | text                                 | no       | 'editor'          | Role assigned on acceptance. Future: 'viewer', 'contributor' |
+| role       | text                                 | no       | 'contributor'     | 'contributor' or 'member' — role assigned on acceptance |
 | expires_at | timestamptz                          | yes      | null              | Optional expiry                                              |
 | max_uses   | integer                              | yes      | null              | null = unlimited                                             |
 | use_count  | integer                              | no       | 0                 | Tracks how many times used                                   |
@@ -801,7 +801,7 @@ serve(async (req) => {
 
 #### 2. `add-place` (validation layer)
 
-Enforces freemium limit: free users limited to 50 places total.
+Enforces freemium limit: free users limited to 20 places total.
 
 ```typescript
 // Checks total place count across all maps user owns
