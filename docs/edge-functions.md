@@ -1,14 +1,15 @@
 # Edge Functions Reference
 
-5 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally via `auth.getUser()`.
+6 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally — most use `auth.getUser()` with a user Bearer token, except `revenuecat-webhook` which validates a shared webhook secret.
 
 ## Overview
 
 | Function | Purpose | Key Rule |
 |----------|---------|----------|
 | `create-map` | Create a new map with default tags | Freemium: 1 map for free users |
-| `add-place` | Save a place to a map | Freemium: 50 places for free users |
+| `add-place` | Save a place to a map | Freemium: 20 places for free users; owner/contributor only |
 | `accept-invite` | Accept an invite token and join a map | Validates expiry, max uses, duplicates |
+| `create-invite` | Create an invite link for a map | Premium owners only |
 | `revenuecat-webhook` | Sync purchase events to entitlement | Maps RC events → `profiles.entitlement` |
 | `delete-account` | Delete user and all associated data | RC cleanup (best-effort) + auth deletion |
 
@@ -96,14 +97,15 @@ Required fields: `googlePlaceId`, `name`, `latitude`, `longitude`, `mapId`. All 
 | 401 | `{ "error": "Missing authorization header" }` | No auth header |
 | 401 | `{ "error": "Invalid or expired token" }` | Bad token |
 | 403 | `{ "error": "You are not a member of this map" }` | Not a map member |
-| 403 | `{ "error": "Free accounts are limited to 50 places...", "code": "FREEMIUM_LIMIT_EXCEEDED" }` | Free user at place limit |
+| 403 | `{ "error": "You do not have permission to add places to this map" }` | User is a `member` (not owner/contributor) |
+| 403 | `{ "error": "Free accounts are limited to 20 places...", "code": "FREEMIUM_LIMIT_EXCEEDED" }` | Free user at place limit |
 | 409 | `{ "error": "This place is already saved to this map" }` | Duplicate map_place |
 | 500 | `{ "error": "..." }` | Database failure |
 
 ### Business Rules
 
-- User must be a member of the target map
-- Free users can add max 50 places total (counted by `added_by` across all maps)
+- User must be an owner or contributor on the target map (members cannot add places)
+- Free users can add max 20 places total (counted by `added_by` across all maps)
 - `places` row is deduplicated: if `google_place_id` already exists, reuses it (Postgres error code `23505` on conflict)
 - Same place can't be saved to the same map twice (`UNIQUE(map_id, place_id)`)
 - Tags and visited status are optional — if `tagIds` provided, inserts into `map_place_tags`; if `visited` is true, inserts into `place_visits`
@@ -137,7 +139,7 @@ Authorization: Bearer <user-jwt>
 
 | Status | Body | When |
 |--------|------|------|
-| 200 | `{ "mapId": "uuid", "mapName": "Trip to Paris", "role": "editor" }` | Success |
+| 200 | `{ "mapId": "uuid", "mapName": "Trip to Paris", "role": "contributor" }` | Success (role reflects invite configuration) |
 | 400 | `{ "error": "Invite token is required" }` | Empty or missing token |
 | 401 | `{ "error": "Missing authorization header" }` | No auth header |
 | 401 | `{ "error": "Invalid or expired token" }` | Bad token |
@@ -151,13 +153,68 @@ Authorization: Bearer <user-jwt>
 
 - Validates token exists, hasn't expired, and hasn't exceeded max uses
 - Prevents duplicate membership (checks `map_members` first)
-- Assigns the role specified in the invite (default: `editor`)
+- Assigns the role specified in the invite (default: `contributor`)
 - Increments `use_count` on the invite (non-fatal — if it fails, membership was already created)
 - Returns map name for the client confirmation UI
 
 ### Tables Written
 
 `map_members`, `map_invites` (use_count increment)
+
+---
+
+## create-invite
+
+Creates an invite link for a map. Only premium map owners can create invites.
+
+**Auth:** User Bearer token
+
+### Request
+
+```http
+POST /functions/v1/create-invite
+Authorization: Bearer <user-jwt>
+```
+
+```json
+{
+  "mapId": "uuid",
+  "role": "contributor",
+  "expiresInDays": 7,
+  "maxUses": 10
+}
+```
+
+Required fields: `mapId`. Optional: `role` (default: `'contributor'`), `expiresInDays`, `maxUses`.
+
+### Responses
+
+| Status | Body | When |
+|--------|------|------|
+| 201 | `{ "invite": { ... }, "link": "https://mapvault.app/invite/{token}" }` | Success |
+| 400 | `{ "error": "Invalid or missing JSON in request body" }` | Unparseable body |
+| 400 | `{ "error": "mapId must be a valid UUID" }` | Missing or invalid mapId |
+| 400 | `{ "error": "Role must be 'contributor' or 'member'" }` | Invalid role |
+| 400 | `{ "error": "expiresInDays must be a positive integer" }` | Invalid expiry |
+| 400 | `{ "error": "maxUses must be a positive integer" }` | Invalid max uses |
+| 401 | `{ "error": "Missing authorization header" }` | No auth header |
+| 401 | `{ "error": "Invalid or expired token" }` | Bad token |
+| 403 | `{ "error": "Only map owners can create invites" }` | User is not the map owner |
+| 403 | `{ "error": "Invite links are a Premium feature. Upgrade to share your maps.", "code": "FREEMIUM_LIMIT_EXCEEDED" }` | Free user |
+| 500 | `{ "error": "..." }` | Database failure |
+
+### Business Rules
+
+- User must be the **owner** of the target map
+- User must have **premium** entitlement (free users cannot create invites)
+- Role must be `'contributor'` or `'member'` (cannot invite as owner)
+- `expiresInDays` sets `expires_at` to now + N days (null = never expires)
+- `maxUses` limits how many times the invite can be accepted (null = unlimited)
+- Returns the full invite object and the Universal Link URL
+
+### Tables Written
+
+`map_invites`
 
 ---
 

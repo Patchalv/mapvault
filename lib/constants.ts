@@ -1,6 +1,12 @@
 export const FREE_TIER = {
   maxMaps: 1,
-  maxPlaces: 50,
+  maxPlaces: 20,
+} as const;
+
+export const ROLES = {
+  owner: 'owner',
+  contributor: 'contributor',
+  member: 'member',
 } as const;
 
 export const ENTITLEMENTS = {

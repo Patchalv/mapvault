@@ -6,6 +6,7 @@ import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from '@/hooks/use-auth';
 import { useMaps } from '@/hooks/use-maps';
+import { useProfile } from '@/hooks/use-profile';
 import { useTags } from '@/hooks/use-tags';
 import { useMapMembers } from '@/hooks/use-map-members';
 import { useUpdateMap } from '@/hooks/use-update-map';
@@ -14,6 +15,8 @@ import { useLeaveMap } from '@/hooks/use-leave-map';
 import { useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-manage-tags';
 import { useInvites } from '@/hooks/use-invites';
 import { useCreateInvite } from '@/hooks/use-create-invite';
+import { useUpdateMemberRole } from '@/hooks/use-update-member-role';
+import { useFreemiumGate } from '@/hooks/use-freemium-gate';
 import { TagEditor } from '@/components/tag-editor/tag-editor';
 import { InviteSection } from '@/components/invite-section/invite-section';
 import { InviteCreator } from '@/components/invite-creator/invite-creator';
@@ -34,8 +37,11 @@ export default function MapSettingsScreen() {
   const { mutate: createTag, isPending: isCreatingTag } = useCreateTag();
   const { mutate: updateTag, isPending: isUpdatingTag } = useUpdateTag();
   const { mutate: deleteTag, isPending: isDeletingTag } = useDeleteTag();
+  const { data: profile } = useProfile();
   const { data: invites, isLoading: isLoadingInvites } = useInvites(id ?? null);
   const { mutate: createInvite, isPending: isCreatingInvite } = useCreateInvite();
+  const { mutate: updateMemberRole } = useUpdateMemberRole();
+  const { handleMutationError } = useFreemiumGate();
 
   const tagEditorRef = useRef<BottomSheetModal>(null);
   const inviteCreatorRef = useRef<BottomSheetModal>(null);
@@ -45,6 +51,8 @@ export default function MapSettingsScreen() {
   const membership = mapMembers?.find((m) => m.maps?.id === id);
   const map = membership?.maps;
   const isOwner = membership?.role === 'owner';
+  const canEdit = membership?.role === 'owner' || membership?.role === 'contributor';
+  const isPremium = profile?.entitlement === 'premium';
   const ownedMapCount = mapMembers?.filter((m) => m.role === 'owner').length ?? 0;
 
   const [mapName, setMapName] = useState(map?.name ?? '');
@@ -165,16 +173,40 @@ export default function MapSettingsScreen() {
   const handleCreateInvite = useCallback(
     (input: {
       mapId: string;
-      role: 'editor';
+      role: 'contributor' | 'member';
       expiresInDays: number | null;
       maxUses: number | null;
     }) => {
       createInvite(input, {
         onSuccess: () => inviteCreatorRef.current?.dismiss(),
-        onError: (err) => Alert.alert('Error', err.message),
+        onError: (err) => handleMutationError(err, 'invite_limit'),
       });
     },
-    [createInvite]
+    [createInvite, handleMutationError]
+  );
+
+  const handleChangeRole = useCallback(
+    (memberId: string, memberName: string, currentRole: string) => {
+      if (!id || !isPremium) return;
+      const newRole = currentRole === 'contributor' ? 'member' : 'contributor';
+      const newRoleLabel = newRole === 'contributor' ? 'Contributor' : 'Member';
+      Alert.alert(
+        'Change Role',
+        `Make ${memberName} a ${newRoleLabel}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: newRoleLabel,
+            onPress: () =>
+              updateMemberRole(
+                { memberId, mapId: id, newRole },
+                { onError: (err) => Alert.alert('Error', err.message) }
+              ),
+          },
+        ]
+      );
+    },
+    [id, isPremium, updateMemberRole]
   );
 
   if (isLoadingMaps) {
@@ -259,41 +291,64 @@ export default function MapSettingsScreen() {
               <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Tags
               </Text>
-              <Pressable
-                onPress={handleAddTag}
-                className="flex-row items-center rounded-lg bg-blue-500 px-3 py-1.5"
-              >
-                <FontAwesome name="plus" size={10} color="#FFFFFF" />
-                <Text className="ml-1.5 text-xs font-semibold text-white">
-                  Add Tag
-                </Text>
-              </Pressable>
+              {canEdit && (
+                <Pressable
+                  onPress={handleAddTag}
+                  className="flex-row items-center rounded-lg bg-blue-500 px-3 py-1.5"
+                >
+                  <FontAwesome name="plus" size={10} color="#FFFFFF" />
+                  <Text className="ml-1.5 text-xs font-semibold text-white">
+                    Add Tag
+                  </Text>
+                </Pressable>
+              )}
             </View>
             {isLoadingTags ? (
               <ActivityIndicator size="small" color="#9CA3AF" />
             ) : tags && tags.length > 0 ? (
               <View className="flex-row flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Pressable
-                    key={tag.id}
-                    onPress={() => handleEditTag(tag)}
-                    style={{
-                      borderColor: tag.color ?? '#E5E7EB',
-                      backgroundColor: `${tag.color ?? '#6B7280'}15`,
-                    }}
-                    className="flex-row items-center rounded-full border-2 px-3 py-1.5"
-                  >
-                    {tag.emoji && (
-                      <Text className="mr-1 text-sm">{tag.emoji}</Text>
-                    )}
-                    <Text
-                      style={{ color: tag.color ?? '#374151' }}
-                      className="text-sm font-medium"
+                {tags.map((tag) =>
+                  canEdit ? (
+                    <Pressable
+                      key={tag.id}
+                      onPress={() => handleEditTag(tag)}
+                      style={{
+                        borderColor: tag.color ?? '#E5E7EB',
+                        backgroundColor: `${tag.color ?? '#6B7280'}15`,
+                      }}
+                      className="flex-row items-center rounded-full border-2 px-3 py-1.5"
                     >
-                      {tag.name}
-                    </Text>
-                  </Pressable>
-                ))}
+                      {tag.emoji && (
+                        <Text className="mr-1 text-sm">{tag.emoji}</Text>
+                      )}
+                      <Text
+                        style={{ color: tag.color ?? '#374151' }}
+                        className="text-sm font-medium"
+                      >
+                        {tag.name}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View
+                      key={tag.id}
+                      style={{
+                        borderColor: tag.color ?? '#E5E7EB',
+                        backgroundColor: `${tag.color ?? '#6B7280'}15`,
+                      }}
+                      className="flex-row items-center rounded-full border-2 px-3 py-1.5"
+                    >
+                      {tag.emoji && (
+                        <Text className="mr-1 text-sm">{tag.emoji}</Text>
+                      )}
+                      <Text
+                        style={{ color: tag.color ?? '#374151' }}
+                        className="text-sm font-medium"
+                      >
+                        {tag.name}
+                      </Text>
+                    </View>
+                  )
+                )}
               </View>
             ) : (
               <Text className="text-sm text-gray-400">No tags yet</Text>
@@ -318,10 +373,30 @@ export default function MapSettingsScreen() {
                 .toUpperCase()
                 .slice(0, 2);
               const isCurrentUser = member.user_id === user?.id;
+              const canChangeRole =
+                isOwner && isPremium && !isCurrentUser && member.role !== 'owner';
+
+              const roleBadgeColor =
+                member.role === 'owner'
+                  ? 'bg-blue-100'
+                  : member.role === 'contributor'
+                    ? 'bg-green-100'
+                    : 'bg-gray-100';
+              const roleTextColor =
+                member.role === 'owner'
+                  ? 'text-blue-700'
+                  : member.role === 'contributor'
+                    ? 'text-green-700'
+                    : 'text-gray-600';
 
               return (
-                <View
+                <Pressable
                   key={member.id}
+                  onPress={
+                    canChangeRole
+                      ? () => handleChangeRole(member.id, name, member.role)
+                      : undefined
+                  }
                   className="mb-2 flex-row items-center rounded-xl border border-gray-100 p-3"
                 >
                   <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-gray-200">
@@ -336,21 +411,23 @@ export default function MapSettingsScreen() {
                     </Text>
                   </View>
                   <View
-                    className={`rounded-full px-2 py-0.5 ${
-                      member.role === 'owner' ? 'bg-blue-100' : 'bg-gray-100'
-                    }`}
+                    className={`rounded-full px-2 py-0.5 ${roleBadgeColor}`}
                   >
                     <Text
-                      className={`text-xs font-medium capitalize ${
-                        member.role === 'owner'
-                          ? 'text-blue-700'
-                          : 'text-gray-600'
-                      }`}
+                      className={`text-xs font-medium capitalize ${roleTextColor}`}
                     >
                       {member.role}
                     </Text>
                   </View>
-                </View>
+                  {canChangeRole && (
+                    <FontAwesome
+                      name="chevron-right"
+                      size={10}
+                      color="#9CA3AF"
+                      style={{ marginLeft: 8 }}
+                    />
+                  )}
+                </Pressable>
               );
             })}
           </View>
@@ -359,6 +436,8 @@ export default function MapSettingsScreen() {
           <InviteSection
             invites={invites}
             isLoading={isLoadingInvites}
+            isOwner={isOwner}
+            isPremium={isPremium}
             onCreateInvite={handleOpenInviteCreator}
           />
 

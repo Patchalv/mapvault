@@ -40,7 +40,7 @@ export default function ExploreScreen() {
   const cameraRef = useRef<Mapbox.Camera>(null);
   const lastFocusedRef = useRef<string | null>(null);
   const { location } = useLocation();
-  const { activeMapId, activeMapName, maps, setActiveMap, isAllMaps } =
+  const { activeMapId, activeMapName, canEditActiveMap, mapMembers, maps, setActiveMap, isAllMaps } =
     useActiveMap();
 
   // Use different queries based on All Maps mode
@@ -89,6 +89,15 @@ export default function ExploreScreen() {
   });
 
   const selectedPlace = filteredPlaces.find((p) => p.id === selectedPlaceId) ?? null;
+
+  // Determine edit permission for the selected place
+  const selectedPlaceCanEdit = (() => {
+    if (!selectedPlace) return true;
+    if (!isAllMaps) return canEditActiveMap ?? false;
+    // All Maps mode: look up role for the place's map
+    const membership = mapMembers.find((m) => m.map_id === selectedPlace.map_id);
+    return membership?.role === 'owner' || membership?.role === 'contributor';
+  })();
 
   // Fetch tags for the selected place's map (handles All Maps mode)
   const selectedPlaceMapId = selectedPlace?.map_id ?? null;
@@ -445,6 +454,7 @@ export default function ExploreScreen() {
         ref={detailSheetRef}
         place={selectedPlace}
         availableTags={selectedPlaceTags ?? []}
+        canEdit={selectedPlaceCanEdit}
         onToggleVisited={handleToggleVisited}
         onToggleTag={handleTogglePlaceTag}
         onUpdateNote={handleUpdateNote}

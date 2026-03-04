@@ -23,7 +23,7 @@ export default function PaywallScreen() {
   const isPremium = profile?.entitlement === 'premium';
 
   useEffect(() => {
-    const validTriggers = ['map_limit', 'place_limit', 'profile_tap'] as const;
+    const validTriggers = ['map_limit', 'place_limit', 'invite_limit', 'profile_tap', 'profile_cta'] as const;
     type PaywallTrigger = (typeof validTriggers)[number];
     const paywallTrigger: PaywallTrigger = validTriggers.includes(trigger as PaywallTrigger)
       ? (trigger as PaywallTrigger)
@@ -141,8 +141,9 @@ export default function PaywallScreen() {
           </View>
 
           <FeatureRow label="Maps" free="1" premium="Unlimited" />
-          <FeatureRow label="Places" free="50" premium="Unlimited" />
-          <FeatureRow label="Shared maps" free="—" premium="✓" />
+          <FeatureRow label="Places" free="20" premium="Unlimited" />
+          <FeatureRow label="Invite links" free="—" premium="✓" />
+          <FeatureRow label="Manage roles" free="—" premium="✓" />
         </View>
 
         {/* Loading state */}

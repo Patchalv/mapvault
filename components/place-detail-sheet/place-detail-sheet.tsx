@@ -12,6 +12,7 @@ import { track } from '@/lib/analytics';
 interface PlaceDetailSheetProps {
   place: MapPlaceWithDetails | null;
   availableTags: Tag[];
+  canEdit?: boolean;
   onToggleVisited: (mapPlaceId: string, visited: boolean) => void;
   onToggleTag: (
     mapPlaceId: string,
@@ -26,7 +27,7 @@ interface PlaceDetailSheetProps {
 
 export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
   function PlaceDetailSheet(
-    { place, availableTags, onToggleVisited, onToggleTag, onUpdateNote, onDelete, onClose },
+    { place, availableTags, canEdit = true, onToggleVisited, onToggleTag, onUpdateNote, onDelete, onClose },
     ref
   ) {
     const isVisited = place?.place_visits[0]?.visited ?? false;
@@ -248,7 +249,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                       </Text>
                     </View>
                   ))}
-                  {availableTags.length > 0 && (
+                  {canEdit && availableTags.length > 0 && (
                     <Pressable
                       onPress={() => setIsEditingTags(true)}
                       hitSlop={8}
@@ -278,7 +279,28 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
               )}
 
               {/* Note */}
-              {isEditingNote ? (
+              {!canEdit ? (
+                place.note ? (
+                  <View
+                    style={{
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: 12,
+                      padding: 12,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: '#374151',
+                        lineHeight: 20,
+                      }}
+                    >
+                      {place.note}
+                    </Text>
+                  </View>
+                ) : null
+              ) : isEditingNote ? (
                 <View style={{ marginBottom: 16 }}>
                   <View
                     style={{
@@ -446,30 +468,32 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
               </View>
 
               {/* Delete Button */}
-              <Pressable
-                onPress={handleDelete}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: 12,
-                  marginTop: 16,
-                  borderRadius: 12,
-                  backgroundColor: '#FEF2F2',
-                  gap: 8,
-                }}
-              >
-                <FontAwesome name="trash-o" size={16} color="#EF4444" />
-                <Text
+              {canEdit && (
+                <Pressable
+                  onPress={handleDelete}
                   style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: '#EF4444',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 12,
+                    marginTop: 16,
+                    borderRadius: 12,
+                    backgroundColor: '#FEF2F2',
+                    gap: 8,
                   }}
                 >
-                  Delete Place
-                </Text>
-              </Pressable>
+                  <FontAwesome name="trash-o" size={16} color="#EF4444" />
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '600',
+                      color: '#EF4444',
+                    }}
+                  >
+                    Delete Place
+                  </Text>
+                </Pressable>
+              )}
             </>
           )}
         </BottomSheetScrollView>

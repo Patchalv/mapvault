@@ -7,8 +7,19 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { track } from '@/lib/analytics';
 import { useAcceptInvite, type InviteError } from '@/hooks/use-accept-invite';
+import type { MapRole } from '@/types';
 
 type Status = 'loading' | 'success' | 'error';
+
+interface SuccessData {
+  mapName: string;
+  role: MapRole;
+}
+
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  contributor: 'You can add, edit, and remove places.',
+  member: 'You can view places but not edit them.',
+};
 
 const ERROR_MESSAGES: Record<string, string> = {
   INVITE_NOT_FOUND: 'This invite link is invalid or has been removed.',
@@ -24,6 +35,7 @@ export default function InviteScreen() {
   const { mutateAsync: acceptInvite } = useAcceptInvite();
 
   const [status, setStatus] = useState<Status>('loading');
+  const [successData, setSuccessData] = useState<SuccessData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,8 +59,8 @@ export default function InviteScreen() {
 
         if (cancelled) return;
 
+        setSuccessData({ mapName: result.mapName, role: result.role });
         setStatus('success');
-        router.replace('/(tabs)/explore');
       } catch (err) {
         if (cancelled) return;
 
@@ -79,6 +91,31 @@ export default function InviteScreen() {
           <Text className="mt-4 text-base text-gray-500">
             Processing invite...
           </Text>
+        </>
+      )}
+
+      {status === 'success' && successData && (
+        <>
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <FontAwesome name="check-circle" size={32} color="#22C55E" />
+          </View>
+          <Text className="mb-2 text-center text-lg font-semibold text-gray-900">
+            You joined {successData.mapName}!
+          </Text>
+          <Text className="mb-2 text-center text-base capitalize text-gray-700">
+            as a {successData.role}
+          </Text>
+          <Text className="mb-8 text-center text-sm text-gray-500">
+            {ROLE_DESCRIPTIONS[successData.role] ?? ''}
+          </Text>
+          <Pressable
+            onPress={() => router.replace('/(tabs)/explore')}
+            className="rounded-xl bg-blue-500 px-8 py-3"
+          >
+            <Text className="text-base font-semibold text-white">
+              Open Map
+            </Text>
+          </Pressable>
         </>
       )}
 

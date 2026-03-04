@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { ActivityIndicator, Alert, View, Text, Pressable, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { router } from 'expo-router';
 import { track } from '@/lib/analytics';
 import { APP_DOMAIN } from '@/lib/constants';
 import type { MapInvite } from '@/types';
@@ -9,6 +10,8 @@ import type { MapInvite } from '@/types';
 interface InviteSectionProps {
   invites: MapInvite[] | undefined;
   isLoading?: boolean;
+  isOwner: boolean;
+  isPremium: boolean;
   onCreateInvite: () => void;
 }
 
@@ -40,7 +43,7 @@ function getInviteLink(token: string): string {
   return `${APP_DOMAIN}/invite/${token}`;
 }
 
-export function InviteSection({ invites, isLoading, onCreateInvite }: InviteSectionProps) {
+export function InviteSection({ invites, isLoading, isOwner, isPremium, onCreateInvite }: InviteSectionProps) {
   const handleShare = useCallback(async (token: string, mapId: string) => {
     const link = getInviteLink(token);
     const result = await Share.share({
@@ -65,15 +68,33 @@ export function InviteSection({ invites, isLoading, onCreateInvite }: InviteSect
         <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
           Invites
         </Text>
-        <Pressable
-          onPress={onCreateInvite}
-          className="flex-row items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5"
-        >
-          <FontAwesome name="plus" size={10} color="#3B82F6" />
-          <Text className="text-xs font-semibold text-blue-600">
-            Create Invite
-          </Text>
-        </Pressable>
+        {isOwner && (
+          <Pressable
+            onPress={() => {
+              if (!isPremium) {
+                Alert.alert(
+                  'Premium Feature',
+                  'Invite links are a Premium feature. Upgrade to share your maps.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Upgrade',
+                      onPress: () => router.push('/(tabs)/profile/paywall?trigger=invite_limit'),
+                    },
+                  ],
+                );
+                return;
+              }
+              onCreateInvite();
+            }}
+            className="flex-row items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5"
+          >
+            <FontAwesome name="plus" size={10} color="#3B82F6" />
+            <Text className="text-xs font-semibold text-blue-600">
+              Create Invite
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Invite List */}

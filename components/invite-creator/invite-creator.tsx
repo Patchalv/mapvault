@@ -2,16 +2,35 @@ import { forwardRef, useCallback, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
+type InviteRole = 'contributor' | 'member';
+
 interface InviteCreatorProps {
   mapId: string;
   onCreateInvite: (input: {
     mapId: string;
-    role: 'editor';
+    role: InviteRole;
     expiresInDays: number | null;
     maxUses: number | null;
   }) => void;
   isPending: boolean;
 }
+
+const ROLE_OPTIONS: Array<{
+  value: InviteRole;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'contributor',
+    label: 'Contributor',
+    description: 'Can add, edit, and remove places',
+  },
+  {
+    value: 'member',
+    label: 'Member',
+    description: 'Can view places only',
+  },
+];
 
 const EXPIRY_OPTIONS: Array<{ label: string; value: number | null }> = [
   { label: 'No expiry', value: null },
@@ -28,22 +47,23 @@ const MAX_USES_OPTIONS: Array<{ label: string; value: number | null }> = [
 
 export const InviteCreator = forwardRef<BottomSheetModal, InviteCreatorProps>(
   function InviteCreator({ mapId, onCreateInvite, isPending }, ref) {
+    const [role, setRole] = useState<InviteRole>('contributor');
     const [expiresInDays, setExpiresInDays] = useState<number | null>(null);
     const [maxUses, setMaxUses] = useState<number | null>(null);
 
     const handleCreate = useCallback(() => {
       onCreateInvite({
         mapId,
-        role: 'editor',
+        role,
         expiresInDays,
         maxUses,
       });
-    }, [mapId, expiresInDays, maxUses, onCreateInvite]);
+    }, [mapId, role, expiresInDays, maxUses, onCreateInvite]);
 
     return (
       <BottomSheetModal
         ref={ref}
-        snapPoints={['50%']}
+        snapPoints={['60%']}
         backgroundStyle={{ backgroundColor: '#FFFFFF', borderRadius: 24 }}
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
       >
@@ -61,6 +81,63 @@ export const InviteCreator = forwardRef<BottomSheetModal, InviteCreatorProps>(
           >
             Create Invite
           </Text>
+
+          {/* Role */}
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: '#6B7280',
+              marginBottom: 10,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Role
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 8,
+              marginBottom: 20,
+            }}
+          >
+            {ROLE_OPTIONS.map((option) => {
+              const isSelected = role === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setRole(option.value)}
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: isSelected ? '#3B82F6' : '#F3F4F6',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: isSelected ? '#FFFFFF' : '#374151',
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      color: isSelected ? '#DBEAFE' : '#9CA3AF',
+                      marginTop: 2,
+                    }}
+                  >
+                    {option.description}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
           {/* Expiry */}
           <Text

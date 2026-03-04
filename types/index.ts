@@ -24,7 +24,7 @@ export type MapInviteInsert = Database['public']['Tables']['map_invites']['Inser
 
 // Union types for constrained text columns
 export type Entitlement = 'free' | 'premium';
-export type MapRole = 'owner' | 'editor';
+export type MapRole = 'owner' | 'contributor' | 'member';
 
 // Composite types for queries with joins
 export interface MapPlaceWithDetails {

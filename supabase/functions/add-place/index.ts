@@ -51,10 +51,10 @@ serve(async (req) => {
       );
     }
 
-    // 3. Verify user is a member of the target map
+    // 3. Verify user is a member with write access (owner or contributor)
     const { data: membership, error: memberError } = await supabase
       .from("map_members")
-      .select("id")
+      .select("id, role")
       .eq("map_id", mapId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -69,6 +69,13 @@ serve(async (req) => {
     if (!membership) {
       return new Response(
         JSON.stringify({ error: "You are not a member of this map" }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (membership.role !== "owner" && membership.role !== "contributor") {
+      return new Response(
+        JSON.stringify({ error: "You don't have permission to add places to this map" }),
         { status: 403, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -100,10 +107,10 @@ serve(async (req) => {
         );
       }
 
-      if ((count ?? 0) >= 50) {
+      if ((count ?? 0) >= 20) {
         return new Response(
           JSON.stringify({
-            error: "Free accounts are limited to 50 places. Upgrade to premium for unlimited places.",
+            error: "Free accounts are limited to 20 places. Upgrade to premium for unlimited places.",
             code: "FREEMIUM_LIMIT_EXCEEDED",
           }),
           { status: 403, headers: { "Content-Type": "application/json" } },

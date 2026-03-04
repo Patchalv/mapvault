@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { track } from '@/lib/analytics';
-import { APP_DOMAIN } from '@/lib/constants';
-import type { MapInvite, MapRole } from '@/types';
+import { EdgeFunctionError } from '@/lib/edge-function-error';
+import type { MapInvite } from '@/types';
 
 interface CreateInviteInput {
   mapId: string;
-  role?: MapRole;
+  role?: 'contributor' | 'member';
   expiresInDays?: number | null;
   maxUses?: number | null;
 }
@@ -26,30 +25,33 @@ export function useCreateInvite() {
     mutationFn: async (input: CreateInviteInput): Promise<CreateInviteResult> => {
       if (!user) throw new Error('Not authenticated');
 
-      const token = Crypto.randomUUID();
-      const expiresAt = input.expiresInDays
-        ? new Date(Date.now() + input.expiresInDays * 86_400_000).toISOString()
-        : null;
+      const { data, error } = await supabase.functions.invoke('create-invite', {
+        body: {
+          mapId: input.mapId,
+          role: input.role ?? 'contributor',
+          expiresInDays: input.expiresInDays ?? null,
+          maxUses: input.maxUses ?? null,
+        },
+      });
 
-      const { data, error } = await supabase
-        .from('map_invites')
-        .insert({
-          map_id: input.mapId,
-          token,
-          created_by: user.id,
-          role: input.role ?? 'editor',
-          expires_at: expiresAt,
-          max_uses: input.maxUses ?? null,
-        })
-        .select()
-        .single();
+      if (error) {
+        let message = 'Failed to create invite';
+        let code: string | null = null;
 
-      if (error) throw error;
+        if (error.context instanceof Response) {
+          try {
+            const body = await error.context.json();
+            if (typeof body.error === 'string') message = body.error;
+            if (typeof body.code === 'string') code = body.code;
+          } catch {
+            // Response body wasn't valid JSON
+          }
+        }
 
-      return {
-        invite: data,
-        link: `${APP_DOMAIN}/invite/${token}`,
-      };
+        throw new EdgeFunctionError(message, code);
+      }
+
+      return data as CreateInviteResult;
     },
     onSuccess: (_data, variables) => {
       track('invite_link_created', { map_id: variables.mapId });

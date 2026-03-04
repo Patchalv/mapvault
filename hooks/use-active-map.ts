@@ -4,6 +4,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useMaps } from '@/hooks/use-maps';
 import { track } from '@/lib/analytics';
 import { ALL_MAPS_ID } from '@/lib/constants';
+import type { MapRole } from '@/types';
 
 export function useActiveMap() {
   const { data: profile } = useProfile();
@@ -20,6 +21,13 @@ export function useActiveMap() {
   const activeMap = isAllMaps
     ? null
     : maps.find((m) => m.id === activeMapId) ?? maps[0] ?? null;
+
+  // Role for active map (null when "All Maps")
+  const activeMembership = isAllMaps
+    ? null
+    : mapMembers?.find((m) => m.maps?.id === (activeMap?.id ?? activeMapId)) ?? null;
+  const activeMapRole = (activeMembership?.role ?? null) as MapRole | null;
+  const canEditActiveMap = activeMapRole === 'owner' || activeMapRole === 'contributor';
 
   const { mutate: setActiveMap, isPending: isSettingMap } = useMutation({
     mutationFn: async (mapId: string) => {
@@ -44,7 +52,10 @@ export function useActiveMap() {
   return {
     activeMapId,
     activeMapName: isAllMaps ? 'All Maps' : activeMap?.name ?? null,
+    activeMapRole,
+    canEditActiveMap: isAllMaps ? null : canEditActiveMap,
     maps,
+    mapMembers: mapMembers ?? [],
     setActiveMap,
     isSettingMap,
     isAllMaps,

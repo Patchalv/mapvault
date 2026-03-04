@@ -236,14 +236,20 @@ export default function ProfileScreen() {
               {/* Role badge */}
               <View
                 className={`mr-3 rounded-full px-2 py-0.5 ${
-                  membership.role === "owner" ? "bg-blue-100" : "bg-gray-100"
+                  membership.role === "owner"
+                    ? "bg-blue-100"
+                    : membership.role === "contributor"
+                      ? "bg-green-100"
+                      : "bg-gray-100"
                 }`}
               >
                 <Text
                   className={`text-xs font-medium capitalize ${
                     membership.role === "owner"
                       ? "text-blue-700"
-                      : "text-gray-600"
+                      : membership.role === "contributor"
+                        ? "text-green-700"
+                        : "text-gray-600"
                   }`}
                 >
                   {membership.role}

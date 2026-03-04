@@ -16,7 +16,8 @@ import type { PlacePrediction } from '@/lib/google-places';
 
 export default function AddScreen() {
   const { predictions, isSearching, error, search, clear } = usePlaceSearch();
-  const { activeMapName, isAllMaps } = useActiveMap();
+  const { activeMapName, activeMapRole, isAllMaps } = useActiveMap();
+  const isMemberOnly = !isAllMaps && activeMapRole === 'member';
   const [query, setQuery] = useState('');
 
   useFocusEffect(
@@ -61,6 +62,14 @@ export default function AddScreen() {
           </Text>
         )}
       </View>
+
+      {isMemberOnly && (
+        <View className="mx-4 mb-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+          <Text className="text-sm text-amber-800">
+            You&apos;re a viewer of this map. Switch to a map you can edit to add places.
+          </Text>
+        </View>
+      )}
 
       <View className="mx-4 mb-3 flex-row items-center rounded-xl bg-gray-100 px-4">
         <TextInput
@@ -114,6 +123,7 @@ export default function AddScreen() {
           <Pressable
             className="mx-4 border-b border-gray-100 px-2 py-3 active:bg-gray-50"
             onPress={() => handleSelect(item)}
+            disabled={isMemberOnly}
           >
             <Text className="text-base font-medium">{item.name}</Text>
             <Text className="mt-0.5 text-sm text-gray-500">

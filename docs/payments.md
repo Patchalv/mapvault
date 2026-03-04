@@ -16,8 +16,10 @@ Android: User taps Subscribe → RevenueCat SDK → Google Play Billing → Purc
 ### Free Tier Limits
 
 Defined in `lib/constants.ts`:
-- **1 map** (owned maps only — editor access to shared maps doesn't count)
-- **50 places** (total across all maps, counted by `added_by`)
+- **1 map** (owned maps only — contributor/member access to shared maps doesn't count)
+- **20 places** (total across all maps, counted by `added_by`)
+- **Cannot create invites** (sharing is premium-only)
+- **Cannot manage roles** (changing contributor ↔ member is premium-only)
 
 ### Key Files
 
@@ -30,13 +32,17 @@ Defined in `lib/constants.ts`:
 | `app/(tabs)/profile/index.tsx` | Profile screen: entitlement badge, map creation gating |
 | `supabase/functions/revenuecat-webhook/index.ts` | Webhook: receives RevenueCat events (both platforms), updates `profiles.entitlement` |
 | `supabase/functions/create-map/index.ts` | Edge Function: enforces 1-map limit for free users |
-| `supabase/functions/add-place/index.ts` | Edge Function: enforces 50-place limit for free users |
-| `lib/constants.ts` | Free tier limits, entitlement values, error codes |
+| `supabase/functions/add-place/index.ts` | Edge Function: enforces 20-place limit for free users |
+| `supabase/functions/create-invite/index.ts` | Edge Function: enforces premium-only invite creation |
+| `hooks/use-create-invite.ts` | Mutation hook for creating invite links via Edge Function |
+| `hooks/use-update-member-role.ts` | Mutation hook for changing contributor ↔ member roles |
+| `hooks/use-map-role.ts` | Query hook returning current user's role on a map |
+| `lib/constants.ts` | Free tier limits, entitlement values, role constants, error codes |
 
 ### How Entitlements Work
 
 1. **Database source of truth:** `profiles.entitlement` column (`'free'` or `'premium'`)
-2. **Server-side enforcement:** Edge Functions (`create-map`, `add-place`) check entitlement before mutations. Free users exceeding limits get a `403` with code `FREEMIUM_LIMIT_EXCEEDED`.
+2. **Server-side enforcement:** Edge Functions (`create-map`, `add-place`, `create-invite`) check entitlement before mutations. Free users exceeding limits get a `403` with code `FREEMIUM_LIMIT_EXCEEDED`.
 3. **Client-side display:** The profile hook reads entitlement to show badge and gate UI. The `useFreemiumGate` hook catches limit errors from mutations and shows an upgrade alert.
 4. **Webhook updates:** RevenueCat sends events (from both Apple and Google) to the webhook Edge Function, which updates `profiles.entitlement` directly using the Supabase service role key.
 5. **Client-side sync fallback:** `use-revenuecat.ts` listens for `CustomerInfoUpdate` events and syncs entitlement to the profile cache, so the UI updates even before the webhook roundtrip completes.
@@ -107,6 +113,7 @@ The webhook is platform-agnostic — RevenueCat normalizes events from both Appl
   supabase functions deploy revenuecat-webhook
   supabase functions deploy create-map
   supabase functions deploy add-place
+  supabase functions deploy create-invite
   ```
 
 ### Environment Variables
@@ -194,7 +201,7 @@ curl -s -X POST https://<ref>.supabase.co/functions/v1/revenuecat-webhook \
 2. Profile tab shows "Free" badge (tappable)
 3. Tap badge → navigates to paywall
 4. Try creating a second map → "Map Limit Reached" alert
-5. Try adding 51st place → freemium gate alert
+5. Try adding 21st place → freemium gate alert
 
 **Flow B — Paywall & Offerings:**
 1. Navigate to paywall (Profile > tap "Free" badge)
@@ -212,7 +219,7 @@ curl -s -X POST https://<ref>.supabase.co/functions/v1/revenuecat-webhook \
 
 **Flow D — Limits Lifted:**
 1. With premium entitlement: create additional maps → no limit alert
-2. Add places beyond 50 → no freemium gate
+2. Add places beyond 20 → no freemium gate
 
 **Flow E — Restore Purchases:**
 1. Sign out, sign back in → badge should show "Premium" (RevenueCat `logIn()` syncs)
@@ -220,7 +227,7 @@ curl -s -X POST https://<ref>.supabase.co/functions/v1/revenuecat-webhook \
 3. Go to paywall, tap "Restore Purchases"
 4. Verify: "Restored!" alert, profile updates to premium
 
-**Flow F — Sandbox Renewal & Expiration:**
+**Flow F — Sandbox Renewal & Expiration (iOS only):**
 
 Sandbox subscription timing is accelerated:
 
@@ -233,6 +240,20 @@ Sandbox subscription timing is accelerated:
 2. Each renewal triggers webhook — entitlement stays 'premium'
 3. After ~6 renewals, sandbox stops renewing → EXPIRATION event fires
 4. Verify entitlement reverts to 'free'
+
+**Flow G — Invite Creation Gating:**
+1. As free owner: tap "Invite" on a map → "Sharing is a Premium feature" alert with upgrade option
+2. Subscribe to premium
+3. Tap "Invite" again → invite creation bottom sheet appears
+4. Select role (contributor/member), create invite → link generated
+5. Verify in Supabase: `map_invites` row created with correct role
+
+**Flow H — Role Management:**
+1. As premium owner with at least one shared map member
+2. Tap on a member → role change option appears
+3. Change contributor → member → verify member can no longer add places
+4. Change member → contributor → verify member can now add places
+5. As free owner: role change UI should be hidden or gated
 
 ### On-Device Testing — Android
 
@@ -260,7 +281,7 @@ Same as iOS — freemium gates are platform-agnostic.
 5. Check Supabase: `profiles.entitlement = 'premium'`
 6. Check RevenueCat dashboard: user shows `INITIAL_PURCHASE` event
 
-**Flow D–F:** Same as iOS flows — the entitlement system is identical on both platforms.
+**Flow D–H:** Same as iOS flows — the entitlement system is identical on both platforms.
 
 **Google Play test subscription timing:**
 

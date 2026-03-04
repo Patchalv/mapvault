@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import type { MapRole } from '@/types';
 
 interface AcceptInviteResult {
   mapId: string;
   mapName: string;
-  role: string;
+  role: MapRole;
 }
 
 export interface InviteError extends Error {
