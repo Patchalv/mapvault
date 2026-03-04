@@ -5,9 +5,9 @@
 -- - Adds map_members UPDATE policy for owners to change roles
 
 -- ============================================================
--- 1. Clean up test invites (only 1-2 test rows exist)
+-- 1. Rename editor → contributor in map_invites
 -- ============================================================
-DELETE FROM map_invites;
+UPDATE map_invites SET role = 'contributor' WHERE role = 'editor';
 
 -- ============================================================
 -- 2. Rename editor → contributor in map_members
@@ -77,6 +77,14 @@ CREATE POLICY "Contributors can update places"
       AND map_members.user_id = auth.uid()
       AND map_members.role IN ('owner', 'contributor')
     )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM map_members
+      WHERE map_members.map_id = map_places.map_id
+      AND map_members.user_id = auth.uid()
+      AND map_members.role IN ('owner', 'contributor')
+    )
   );
 
 CREATE POLICY "Contributors can delete places"
@@ -130,6 +138,14 @@ CREATE POLICY "Contributors can create tags"
 CREATE POLICY "Contributors can update tags"
   ON tags FOR UPDATE
   USING (
+    EXISTS (
+      SELECT 1 FROM map_members
+      WHERE map_members.map_id = tags.map_id
+      AND map_members.user_id = auth.uid()
+      AND map_members.role IN ('owner', 'contributor')
+    )
+  )
+  WITH CHECK (
     EXISTS (
       SELECT 1 FROM map_members
       WHERE map_members.map_id = tags.map_id

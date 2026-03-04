@@ -1,6 +1,6 @@
 # Edge Functions Reference
 
-6 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally via `auth.getUser()`.
+6 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally — most use `auth.getUser()` with a user Bearer token, except `revenuecat-webhook` which validates a shared webhook secret.
 
 ## Overview
 
@@ -139,7 +139,7 @@ Authorization: Bearer <user-jwt>
 
 | Status | Body | When |
 |--------|------|------|
-| 200 | `{ "mapId": "uuid", "mapName": "Trip to Paris", "role": "contributor" }` | Success |
+| 200 | `{ "mapId": "uuid", "mapName": "Trip to Paris", "role": "contributor" }` | Success (role reflects invite configuration) |
 | 400 | `{ "error": "Invite token is required" }` | Empty or missing token |
 | 401 | `{ "error": "Missing authorization header" }` | No auth header |
 | 401 | `{ "error": "Invalid or expired token" }` | Bad token |
@@ -171,7 +171,7 @@ Creates an invite link for a map. Only premium map owners can create invites.
 
 ### Request
 
-```
+```http
 POST /functions/v1/create-invite
 Authorization: Bearer <user-jwt>
 ```

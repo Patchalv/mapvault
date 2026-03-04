@@ -42,9 +42,14 @@ serve(async (req) => {
     const { mapId, expiresInDays, maxUses } = body;
     const role = (body.role as string) ?? "contributor";
 
-    if (!mapId) {
+    if (
+      typeof mapId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        mapId,
+      )
+    ) {
       return new Response(
-        JSON.stringify({ error: "Missing required field: mapId" }),
+        JSON.stringify({ error: "mapId must be a valid UUID" }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
@@ -149,7 +154,8 @@ serve(async (req) => {
     }
 
     // 7. Return invite and link
-    const appDomain = "https://www.mapvault.app";
+    const appDomain =
+      Deno.env.get("APP_DOMAIN") ?? "https://www.mapvault.app";
     return new Response(
       JSON.stringify({
         invite,

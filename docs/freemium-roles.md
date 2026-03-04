@@ -131,7 +131,7 @@ Each restriction is enforced at one or more layers:
 
 ## Invite Flow
 
-```
+```text
 Premium Owner taps "Invite"
   -> Selects role (contributor / member)
   -> Client calls create-invite Edge Function
@@ -151,7 +151,7 @@ Recipient taps invite link
 
 ## Role Management Flow
 
-```
+```text
 Premium Owner opens map settings
   -> Sees member list with current roles
   -> Taps on a contributor or member

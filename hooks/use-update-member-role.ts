@@ -13,11 +13,12 @@ export function useUpdateMemberRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ memberId, newRole }: UpdateMemberRoleInput) => {
+    mutationFn: async ({ memberId, mapId, newRole }: UpdateMemberRoleInput) => {
       const { error } = await supabase
         .from('map_members')
         .update({ role: newRole })
-        .eq('id', memberId);
+        .eq('id', memberId)
+        .eq('map_id', mapId);
 
       if (error) throw error;
     },
