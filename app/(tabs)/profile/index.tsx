@@ -7,6 +7,7 @@ import { useFreemiumGate } from "@/hooks/use-freemium-gate";
 import { useMaps } from "@/hooks/use-maps";
 import { useProfile } from "@/hooks/use-profile";
 import { FREE_TIER, LEGAL_URLS } from "@/lib/constants";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { logOutUser } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -42,10 +43,13 @@ export default function ProfileScreen() {
   const { activeMapId } = useActiveMap();
   const { mutate: createMap, isPending: isCreating } = useCreateMap();
   const { handleMutationError } = useFreemiumGate();
+  const shouldShowReviewPrompt = FEATURE_FLAGS.reviewPromptsEnabled;
 
   const [hasStoreAction, setHasStoreAction] = useState(false);
   useEffect(() => {
-    StoreReview.hasAction().then(setHasStoreAction).catch(() => {});
+    StoreReview.hasAction()
+      .then(setHasStoreAction)
+      .catch(() => {});
   }, []);
 
   const isLoading = isLoadingProfile || isLoadingMaps;
@@ -274,7 +278,7 @@ export default function ProfileScreen() {
       )}
 
       {/* Rate MapVault */}
-      {hasStoreAction && (
+      {hasStoreAction && shouldShowReviewPrompt && (
         <Pressable
           onPress={() => {
             const url = StoreReview.storeUrl();
