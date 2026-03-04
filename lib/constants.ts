@@ -28,6 +28,11 @@ export const LEGAL_URLS = {
   terms: 'https://www.mapvault.app/terms',
 } as const;
 
+export const APP_REVIEW = {
+  cooldownMs: 90 * 24 * 60 * 60 * 1000, // 90 days
+  storageKey: 'mapvault_last_review_request',
+} as const;
+
 export const TAG_COLORS = [
   '#EF4444', // red
   '#F97316', // orange

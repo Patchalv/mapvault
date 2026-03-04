@@ -127,6 +127,7 @@ functions/ ← Edge Functions
 - `docs/builds.md` — EAS build profiles and variants
 - `docs/analytics.md` — PostHog analytics events and instrumentation guide
 - `docs/sentry.md` — Sentry error tracking, config, and MCP tools guide
+- `docs/app-reviews.md` — In-app review prompts, triggers, and feature flag
 - `docs/universal-links-website.md` — AASA, assetlinks.json, and invite fallback page specs for mapvault.app
 - Read these before starting any new milestone
 

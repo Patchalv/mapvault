@@ -16,7 +16,9 @@ import { useActiveMap } from '@/hooks/use-active-map';
 import { useTags } from '@/hooks/use-tags';
 import { useAddPlace } from '@/hooks/use-add-place';
 import { useFreemiumGate } from '@/hooks/use-freemium-gate';
+import { useAppReview } from '@/hooks/use-app-review';
 import { track } from '@/lib/analytics';
+import { supabase } from '@/lib/supabase';
 import { getPlaceDetails } from '@/lib/google-places';
 import { MapPickerSheet } from '@/components/map-picker-sheet/map-picker-sheet';
 
@@ -39,6 +41,7 @@ export default function SaveScreen() {
   const { data: tags } = useTags(effectiveMapId);
   const addPlace = useAddPlace();
   const { handleMutationError } = useFreemiumGate();
+  const { maybeRequestReview } = useAppReview();
   const didSaveRef = useRef(false);
 
   // Track abandonment on unmount
@@ -137,6 +140,22 @@ export default function SaveScreen() {
               focusLng: String(placeDetails.longitude),
             },
           });
+          // Check if this is the user's 10th saved place
+          setTimeout(async () => {
+            try {
+              const { data: { user: currentUser } } = await supabase.auth.getUser();
+              if (!currentUser) return;
+              const { count } = await supabase
+                .from('map_places')
+                .select('*', { count: 'exact', head: true })
+                .eq('added_by', currentUser.id);
+              if (count === 10) {
+                maybeRequestReview('places_saved_milestone');
+              }
+            } catch {
+              // Non-critical — silently ignore
+            }
+          }, 1500);
         },
         onError: (error) => {
           handleMutationError(error);
