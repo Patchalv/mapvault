@@ -10,8 +10,8 @@ const IOS_NAV_APPS: NavApp[] = [
   {
     name: 'Apple Maps',
     scheme: 'maps://',
-    buildUrl: (lat, lng, name) =>
-      `maps://?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`,
+    buildUrl: (lat, lng) =>
+      `http://maps.apple.com/?daddr=${lat},${lng}`,
   },
   {
     name: 'Google Maps',
@@ -70,7 +70,11 @@ export async function openDirections(
   }
 
   if (available.length === 1) {
-    await Linking.openURL(available[0].buildUrl(latitude, longitude, placeName));
+    try {
+      await Linking.openURL(available[0].buildUrl(latitude, longitude, placeName));
+    } catch {
+      await Linking.openURL(GOOGLE_MAPS_WEB_URL(latitude, longitude));
+    }
     return;
   }
 
