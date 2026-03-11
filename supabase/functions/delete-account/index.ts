@@ -62,7 +62,33 @@ serve(async (req) => {
       }
     }
 
-    // 3. Delete user from Supabase Auth
+    // 3. Delete from MailerLite (best-effort)
+    const mlApiKey = Deno.env.get("MAILERLITE_API_KEY");
+    if (mlApiKey && user.email && !user.email.endsWith("@privaterelay.appleid.com")) {
+      try {
+        const mlHeaders = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${mlApiKey}`,
+        };
+        const lookupRes = await fetch(
+          `https://connect.mailerlite.com/api/subscribers/${encodeURIComponent(user.email)}`,
+          { headers: mlHeaders },
+        );
+        if (lookupRes.ok) {
+          const subscriberId = (await lookupRes.json()).data?.id;
+          if (subscriberId) {
+            await fetch(
+              `https://connect.mailerlite.com/api/subscribers/${subscriberId}`,
+              { method: "DELETE", headers: mlHeaders },
+            );
+          }
+        }
+      } catch (mlErr) {
+        console.error(`MailerLite deletion error for ${user.id}:`, mlErr);
+      }
+    }
+
+    // 4. Delete user from Supabase Auth
     //    This fires the BEFORE DELETE trigger (handle_user_deleted)
     //    which cleans up all related data in public schema.
     const { error: deleteError } =

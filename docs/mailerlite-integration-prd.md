@@ -218,6 +218,7 @@ Set the following secrets via the Supabase dashboard (Project → Edge Functions
 | `SYNC_WEBHOOK_SECRET` | Random 32-byte hex string (generate with `openssl rand -hex 32`) | Authenticates Database Webhook → sync-to-mailerlite calls |
 | `MAILERLITE_FREE_GROUP_ID` | Numeric group ID from step 5.1 | MailerLite "Free Users" group |
 | `MAILERLITE_PREMIUM_GROUP_ID` | Numeric group ID from step 5.1 | MailerLite "Premium Users" group |
+| `SENTRY_DSN` | Sentry DSN from Project Settings → Client Keys | Enables error capture in `sync-to-mailerlite` when MailerLite sync fails |
 
 > **Group ID type note:** `MAILERLITE_FREE_GROUP_ID` and `MAILERLITE_PREMIUM_GROUP_ID` are read as strings via `Deno.env.get()`. The MailerLite API accepts string values in JSON — do not call `parseInt()` on them.
 
@@ -239,15 +240,16 @@ The Supabase Database Webhook sends a POST request with:
 ### Logic requirements
 1. **Authenticate the request.** Verify the `Authorization` header matches `SYNC_WEBHOOK_SECRET`. Return 401 if missing or incorrect.
 2. **Extract user_id.** Read `record.id` from the webhook payload body. Return 400 if absent.
-3. **Fetch email from auth.users.** Use the Supabase service role client to query `auth.users` by `id`. If the user is not found, return 200 (no-op — may have been deleted before webhook fired).
+3. **Fetch email from auth.users.** Use the Supabase service role client — call `supabase.auth.admin.getUserById(userId)` — do NOT use `supabase.from('users').select(...)`, consistent with Section 8. If the user is not found, return 200 (no-op — may have been deleted before webhook fired).
 4. **Filter Apple private relay emails.** If the email ends with `@privaterelay.appleid.com`, log a message and return 200 without calling MailerLite.
 5. **Upsert subscriber to MailerLite.** Call `POST https://connect.mailerlite.com/api/subscribers` with:
    - `email` — the user's email
    - `fields.source` — `"app"`
    - `fields.entitlement` — `"free"` (all new sign-ups start free)
    - `groups` — array containing `MAILERLITE_FREE_GROUP_ID`
-   If the subscriber already exists, MailerLite will update them (upsert behaviour).
+   If the subscriber already exists, MailerLite will update them (upsert behaviour). If MailerLite returns 409 when adding a subscriber to a group, treat it as success — the subscriber is already a member.
 6. **Return 200** on all handled outcomes, including MailerLite API errors. Log the error to console and return 200 rather than 500 — Supabase Database Webhooks do not retry on failure, so returning 500 provides no benefit and creates misleading log noise. Recovery is via the backfill script.
+7. **Capture Sentry exception on MailerLite 5xx or unexpected exceptions.** Capture a Sentry exception whenever MailerLite returns 5xx or an unexpected exception occurs, even though the function still returns 200. Call `Sentry.captureException()` with the error and tag `{ function: 'sync-to-mailerlite' }` before returning 200. This serves as the alerting mechanism for missed sign-up syncs that require a backfill re-run.
 
 ### Error handling requirements
 - Wrap the entire function body in try/catch. Return 500 with an error message only on unexpected exceptions (i.e. unhandled code paths), not on MailerLite API errors.
@@ -255,11 +257,19 @@ The Supabase Database Webhook sends a POST request with:
 - A MailerLite 4xx or 5xx response should both return 200 — webhooks do not retry, so a 500 buys nothing and creates misleading log noise. Log the status code and response body.
 - Supabase Database Webhooks do not retry on failure. The backfill script (`scripts/backfill-mailerlite.ts`) is the recovery mechanism — re-run it to catch any missed users.
 
+### Environment variables used
+- `SYNC_WEBHOOK_SECRET`
+- `MAILERLITE_API_KEY`
+- `MAILERLITE_FREE_GROUP_ID`
+- `SENTRY_DSN` (new)
+
+> **Sentry in Deno:** Use `import * as Sentry from "npm:@sentry/node"` and call `Sentry.init({ dsn: Deno.env.get("SENTRY_DSN") })` at module level. Sentry should only be initialized once.
+
 ### CORS
 `sync-to-mailerlite` is webhook-only (not called from the app). Do not add CORS headers. Return only `Content-Type: application/json`, matching the existing function pattern.
 
 ### Authentication pattern
-Follow the existing pattern from `revenuecat-webhook/index.ts`: extract `Authorization` header, split on space, compare the second token to the env secret using a constant-time comparison where possible, or direct string equality at minimum.
+Follow the existing pattern from `revenuecat-webhook/index.ts`: extract `Authorization` header, split on space, compare the second token to the env secret using direct string equality, consistent with the existing `revenuecat-webhook` pattern (Deno has no built-in constant-time string comparison).
 
 ### Deploy command
 ```
@@ -312,21 +322,24 @@ Extend the existing `revenuecat-webhook` function to sync group membership chang
 2. If email is a private relay address, skip MailerLite call.
 3. Call MailerLite API to:
    - Remove subscriber from `MAILERLITE_FREE_GROUP_ID`
-   - Add subscriber to `MAILERLITE_PREMIUM_GROUP_ID`
-   (These can be two separate API calls or a subscriber upsert with the new group.)
+   - Add subscriber to `MAILERLITE_PREMIUM_GROUP_ID` — if MailerLite returns 409, treat it as success (subscriber is already a member)
+   - PATCH `fields.entitlement` to `"premium"` via subscriber upsert `POST /api/subscribers` using email
+
+> **PRODUCT_CHANGE note:** Treated as a grant event because MapVault has a single paid tier. If multi-tier pricing is introduced, revisit this mapping.
 
 **For downgrade events** (EXPIRATION, REFUND):
 1. Fetch the user's email from `auth.users`.
 2. If private relay, skip.
 3. Call MailerLite API to:
    - Remove subscriber from `MAILERLITE_PREMIUM_GROUP_ID`
-   - Add subscriber to `MAILERLITE_FREE_GROUP_ID`
+   - Add subscriber to `MAILERLITE_FREE_GROUP_ID` — if MailerLite returns 409, treat it as success (subscriber is already a member)
+   - PATCH `fields.entitlement` to `"free"` via subscriber upsert `POST /api/subscribers` using email
 
 **For CANCELLATION** (currently not handled and should remain unhandled):
 - No MailerLite change. Cancelled users retain premium access until billing period ends. Group change should happen only on EXPIRATION.
 
 ### Error handling requirements
-- Wrap all MailerLite calls in a dedicated try/catch block that is **separate** from the existing profiles update logic.
+- Wrap all MailerLite calls in a dedicated try/catch block that is **separate** from the existing profiles update logic. This MailerLite try/catch must be an inner block nested inside the existing outer try/catch — not reliant on the outer catch, which would cause a 500 if the MailerLite exception propagated.
 - A MailerLite failure must **never** cause the function to return a non-200 status if the Supabase update succeeded. RevenueCat retries on non-200 responses, which would cause duplicate entitlement updates.
 - Log MailerLite errors to console but return 200.
 - If the user's email cannot be fetched from auth.users (user not found), skip the MailerLite call silently.
@@ -389,7 +402,7 @@ One-time sync of all existing users to MailerLite with the correct group based o
 2. **Data source:** Query `auth.users` joined with `public.profiles` (or query both tables separately using service role). For each user, read `email` and `profiles.entitlement`. Use `supabase.auth.admin.listUsers()` with explicit `page` and `perPage` parameters in a loop until all pages are exhausted — the default page size is 50. Example: call `listUsers({ page: 1, perPage: 50 })`, then increment `page` and repeat until `users.length < perPage`.
 3. **Filtering:** Skip any email ending in `@privaterelay.appleid.com`.
 4. **Upsert logic:** For each valid user, call `POST /api/subscribers` with email, fields, and the correct group ID based on entitlement (`free` → `MAILERLITE_FREE_GROUP_ID`, `premium` → `MAILERLITE_PREMIUM_GROUP_ID`).
-5. **Rate limiting:** MailerLite API rate limit is 120 requests/minute on the free tier (2 req/sec). **Preferred path:** use the bulk import endpoint (`POST /api/subscribers/import`) which accepts up to 1,000 subscribers per call and is not subject to per-request rate limits — use this when processing more than 10 users. **Fallback path (single-user loop):** insert a 500 ms delay between each call (`await new Promise(r => setTimeout(r, 500))`). At 500 ms per call, 1,000 users takes ~8 minutes.
+5. **Rate limiting:** MailerLite API rate limit is 120 requests/minute on the free tier (2 req/sec). **Preferred path:** use the bulk import endpoint (`POST /api/subscribers/import`) which accepts up to 1,000 subscribers per call and is not subject to per-request rate limits — use this when processing more than 10 users. **Before implementing the bulk import path, verify that `POST /api/subscribers/import` supports per-subscriber `groups` assignment. If not, fall back to the single-subscriber loop for all users, or upsert groups in a separate pass after import.** **Fallback path (single-user loop):** insert a 500 ms delay between each call (`await new Promise(r => setTimeout(r, 500))`). At 500 ms per call, 1,000 users takes ~8 minutes.
 6. **Idempotent:** The script must be safe to re-run. MailerLite subscriber upsert is naturally idempotent.
 7. **Logging:** Print progress to stdout: number processed, number skipped (private relay), number of errors.
 8. **File location:** `scripts/backfill-mailerlite.ts` (or `.js`)
@@ -412,6 +425,8 @@ One-time sync of all existing users to MailerLite with the correct group based o
 - [ ] A user whose subscription expires (EXPIRATION event) is moved from "Premium Users" to "Free Users" in MailerLite.
 - [ ] A CANCELLATION event does NOT change the user's MailerLite group.
 - [ ] If MailerLite API is unreachable, `revenuecat-webhook` still returns 200 and the `profiles.entitlement` update is not rolled back.
+- [ ] If the user's email is not found in auth.users at plan change time, `revenuecat-webhook` still returns 200 and the `profiles.entitlement` update is not rolled back.
+- [ ] If MailerLite returns a 401 (invalid API key) during a plan change event, `revenuecat-webhook` still returns 200 and logs the error to console.
 - [ ] No duplicate webhook retries from RevenueCat caused by the MailerLite integration.
 
 ### Step 4: Account deletion
@@ -432,7 +447,7 @@ One-time sync of all existing users to MailerLite with the correct group based o
 
 | Failure scenario | Expected behaviour |
 |---|---|
-| MailerLite API down during sign-up | Database Webhook fires → `sync-to-mailerlite` logs the error and returns 200. User sign-up is unaffected. No automatic retry (Supabase webhooks don't retry). Re-run backfill script to recover. |
+| MailerLite API down during sign-up | Database Webhook fires → `sync-to-mailerlite` captures a Sentry exception and returns 200. User sign-up is unaffected. No automatic retry (Supabase webhooks don't retry). Sentry alert triggers developer to re-run backfill script. |
 | MailerLite API down during plan change | `revenuecat-webhook` catches error, logs it, returns 200. Entitlement update is preserved. MailerLite group will be out of sync until next plan event or manual re-sync. |
 | MailerLite API down during account deletion | `delete-account` catches error, logs it, proceeds with deletion. Subscriber may remain in MailerLite. |
 | User not found in auth.users at webhook time | `sync-to-mailerlite` returns 200 (no-op). Logged to console. |
@@ -452,9 +467,10 @@ Ordered checklist — complete in this sequence to avoid deploying broken states
 - [ ] **2.** Generate MailerLite API key (Step 5.1)
 - [ ] **3.** Generate `SYNC_WEBHOOK_SECRET` value (`openssl rand -hex 32`)
 - [ ] **4.** Add all four secrets to Supabase: `MAILERLITE_API_KEY`, `SYNC_WEBHOOK_SECRET`, `MAILERLITE_FREE_GROUP_ID`, `MAILERLITE_PREMIUM_GROUP_ID` (Step 5.2)
+- [ ] **4a.** Add `SENTRY_DSN` secret to Supabase (copy from Sentry Project Settings → Client Keys → DSN)
 - [ ] **5.** Create `supabase/functions/sync-to-mailerlite/index.ts` per Step 6 requirements
 - [ ] **6.** Deploy `sync-to-mailerlite`: `supabase functions deploy sync-to-mailerlite --no-verify-jwt`
-- [ ] **7.** Configure Database Webhook in Supabase dashboard per Step 7 (pointing to `sync-to-mailerlite`, with Authorization header)
+- [ ] **7.** Configure Database Webhook in Supabase dashboard per Step 7 (pointing to `sync-to-mailerlite`, with Authorization header). The Edge Function URL is only available after step 6 (deploy) — copy it from Supabase Dashboard → Edge Functions → sync-to-mailerlite.
 - [ ] **8.** Test: create a test user in Supabase Auth → verify subscriber appears in MailerLite "Free Users"
 - [ ] **9.** Test: create a test user with a `@privaterelay.appleid.com` email → verify NOT in MailerLite
 - [ ] **10.** Update `supabase/functions/revenuecat-webhook/index.ts` per Step 8 requirements

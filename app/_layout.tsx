@@ -1,20 +1,20 @@
-import '@/global.css';
+import "@/global.css";
 
-import { useEffect, useRef } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
-import { useFonts } from 'expo-font';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import * as SplashScreen from 'expo-splash-screen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { PostHogProvider, usePostHog } from 'posthog-react-native';
-import { useAuth } from '@/hooks/use-auth';
-import { setPostHogInstance } from '@/lib/analytics';
-import * as Sentry from '@sentry/react-native';
+import { useAuth } from "@/hooks/use-auth";
+import { setPostHogInstance } from "@/lib/analytics";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import * as Sentry from "@sentry/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
+import { Slot, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { PostHogProvider, usePostHog } from "posthog-react-native";
+import { useEffect, useRef } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 Sentry.init({
-  dsn: 'https://039a0687d8e49c793aa0b1eb08e07ded@o4508054876061696.ingest.de.sentry.io/4510937169592400',
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN!,
   enabled: !__DEV__,
   tracesSampleRate: 0.2,
   replaysSessionSampleRate: 0.1,
@@ -23,7 +23,7 @@ Sentry.init({
   spotlight: __DEV__,
 });
 
-export { ErrorBoundary } from 'expo-router';
+export { ErrorBoundary } from "expo-router";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -54,15 +54,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const inInviteRoute = segments[0] === 'invite';
+    const inAuthGroup = segments[0] === "(auth)";
+    const inInviteRoute = segments[0] === "invite";
 
     if (!isAuthenticated && !inAuthGroup) {
       // Store invite deep link before redirecting to sign-in
       if (inInviteRoute && segments[1]) {
         pendingDeepLink.current = `/invite/${segments[1]}`;
       }
-      router.replace('/(auth)/sign-in');
+      router.replace("/(auth)/sign-in");
     } else if (isAuthenticated && inAuthGroup) {
       // After sign-in, redirect to pending deep link or explore
       if (pendingDeepLink.current) {
@@ -70,7 +70,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         pendingDeepLink.current = null;
         router.replace(path as never);
       } else {
-        router.replace('/(tabs)/explore');
+        router.replace("/(tabs)/explore");
       }
     }
   }, [isAuthenticated, isLoading, segments]);
@@ -80,7 +80,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default Sentry.wrap(function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     ...FontAwesome.font,
   });
 
