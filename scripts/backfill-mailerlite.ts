@@ -109,7 +109,10 @@ async function upsertOne(
       );
     }
   } else if (lookupRes.status !== 404) {
-    await lookupRes.text(); // consume body
+    const body = await lookupRes.text();
+    throw new Error(
+      `Subscriber lookup failed for ${email}: ${lookupRes.status} ${body}`,
+    );
   }
 
   const res = await fetch("https://connect.mailerlite.com/api/subscribers", {
