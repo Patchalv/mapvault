@@ -134,7 +134,7 @@ MailerLite is treated as a **best-effort side effect**. The core user experience
 | MailerLite down during plan change | `revenuecat-webhook` catches error in inner try/catch, logs it, returns 200. Entitlement update is preserved in Supabase. MailerLite group stays out of sync until next event or manual backfill. |
 | MailerLite down during account deletion | `delete-account` catches error, logs it, proceeds with deletion. Subscriber may remain in MailerLite. |
 | Apple private relay email | All three functions skip the MailerLite call and proceed normally. |
-| Subscriber not in MailerLite at deletion | 404 on lookup or group removal is treated as success. |
+| Subscriber not in MailerLite at deletion | 404 on subscriber lookup or delete is treated as success (subscriber already removed or never synced). |
 | Invalid API key (401) | Functions log the response and return 200. No 500 — RevenueCat would retry on 5xx, causing duplicate entitlement updates. |
 
 **Why MailerLite-specific failures never return 500:**
