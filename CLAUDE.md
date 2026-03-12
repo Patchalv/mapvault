@@ -130,6 +130,7 @@ functions/ ← Edge Functions
 - `docs/app-reviews.md` — In-app review prompts, triggers, and feature flag
 - `docs/universal-links-website.md` — AASA, assetlinks.json, and invite fallback page specs for mapvault.app
 - `docs/freemium-roles.md` — Freemium tiers, three-role system, and permission matrices
+- `docs/mailerlite.md` — MailerLite integration: sync paths, groups, backfill script, error handling
 - Read these before starting any new milestone
 
 ## Skills & Commands
