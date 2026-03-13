@@ -63,8 +63,13 @@ Claude Code must fetch and read these before implementing:
 
 ```bash
 npm install i18next react-i18next
-npm install --save-dev husky
+npm install --save-dev husky tsx
 ```
+
+**Note:** `tsx` is required to run `scripts/check-translations.ts` in Node. It is NOT
+a runtime dependency — dev only. `ts-node` is NOT used: it is not installed in this
+project and is incompatible with the project's `tsconfig.json` which uses
+`"module": "preserve"` and `"moduleResolution": "bundler"` (Expo SDK 54 defaults).
 
 After installing, verify the installed versions and note them in a comment at the top
 of `lib/i18n.ts`.
@@ -93,57 +98,51 @@ strings found in the codebase during migration (Step 6).
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "done": "Done",
-    "close": "Close",
     "loading": "Loading...",
     "error": "Something went wrong",
     "retry": "Try again",
-    "confirm": "Confirm",
-    "back": "Back",
-    "next": "Next",
-    "yes": "Yes",
-    "no": "No"
+    "confirm": "Confirm"
   },
   "explore": {
     "title": "Explore",
     "searchPlaceholder": "Search places...",
-    "noPlaces": "No places saved yet",
     "filterButton": "Filter"
+  },
+  "emptyState": {
+    "noPlacesFound": "No places found",
+    "saveFirstPlace": "Save your first place",
+    "buildYourMap": "Start building your personal map by adding places you love or want to visit."
   },
   "addPlace": {
     "title": "Add Place",
     "searchPlaceholder": "Search for a place...",
     "saveButton": "Save Place",
-    "namePlaceholder": "Place name",
-    "notesPlaceholder": "Add a note...",
-    "tagPlaceholder": "Add a tag..."
+    "notesPlaceholder": "Add a note..."
   },
   "map": {
     "title": "Map"
   },
-  "settings": {
-    "title": "Settings",
-    "account": "Account",
+  "profile": {
     "signOut": "Sign Out",
-    "language": "Language",
+    "loadingProfile": "Loading your profile...",
+    "manageMaps": "Manage Maps",
+    "newMap": "New Map",
+    "freeUpgrade": "free - upgrade",
+    "premium": "premium",
+    "rateMapVault": "Rate MapVault",
+    "deleteAccount": "Delete account",
     "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service",
-    "support": "Support"
+    "termsOfService": "Terms of Service"
   },
   "auth": {
     "signIn": "Sign In",
-    "signUp": "Sign Up",
-    "email": "Email",
-    "password": "Password",
-    "forgotPassword": "Forgot password?",
-    "continueWithApple": "Continue with Apple",
     "continueWithGoogle": "Continue with Google"
   },
   "premium": {
     "upgradeBanner": "Upgrade to Premium",
-    "limitReached": "You've reached the 20 place limit",
-    "upgradeButton": "Get Premium",
-    "price": "€9.99 / year",
+    "limitReached": "Map Limit Reached",
+    "limitMessage": "Free accounts are limited to 1 map. Upgrade to premium for unlimited maps.",
+    "upgradeButton": "Upgrade",
     "restorePurchases": "Restore Purchases",
     "features": {
       "unlimited": "Unlimited places",
@@ -153,16 +152,67 @@ strings found in the codebase during migration (Step 6).
   },
   "places": {
     "deleteConfirm": "Delete this place?",
-    "deleteMessage": "This action cannot be undone.",
-    "saved": "Place saved",
-    "deleted": "Place deleted",
-    "limitWarning": "{{remaining}} places remaining on free plan"
+    "deleteMessage": "This action cannot be undone."
   },
-  "errors": {
-    "networkError": "No internet connection",
-    "authError": "Authentication failed. Please sign in again.",
-    "permissionDenied": "You don't have permission to do that",
-    "notFound": "Not found"
+  "filter": {
+    "title": "Filters",
+    "clearAll": "Clear all",
+    "searchPlaceholder": "Search places...",
+    "tags": "Tags",
+    "status": "Status",
+    "all": "All",
+    "visited": "Visited",
+    "notVisited": "Not visited",
+    "switchToMapMessage": "Switch to a specific map to filter by tags"
+  },
+  "placeDetail": {
+    "editTags": "Edit Tags",
+    "addTags": "Add tags",
+    "editNote": "Edit Note",
+    "addNote": "Add note...",
+    "visited": "Visited",
+    "notVisited": "Not visited",
+    "directions": "Directions",
+    "deletePlace": "Delete Place",
+    "deleteConfirm": "Delete {{placeName}}?",
+    "deleteMessage": "This action cannot be undone."
+  },
+  "mapSettings": {
+    "title": "Map Settings",
+    "mapName": "Map Name",
+    "tags": "Tags",
+    "addTag": "Add Tag",
+    "noTagsYet": "No tags yet",
+    "members": "Members",
+    "dangerZone": "Danger Zone",
+    "deleteMap": "Delete Map",
+    "leaveMap": "Leave Map"
+  },
+  "invite": {
+    "processing": "Processing invite...",
+    "joined": "You joined {{mapName}}!",
+    "createInvite": "Create Invite",
+    "createAndShare": "Create & Share",
+    "copyLink": "Copy Link"
+  },
+  "tagEditor": {
+    "editTitle": "Edit Tag",
+    "newTitle": "New Tag",
+    "namePlaceholder": "Tag name",
+    "color": "Color",
+    "saveChanges": "Save Changes",
+    "createTag": "Create Tag",
+    "deleteTag": "Delete Tag"
+  },
+  "deleteAccount": {
+    "subscriptionWarning": "If you have an active subscription, cancel it before deleting your account.",
+    "deleteButton": "Delete My Account"
+  },
+  "paywall": {
+    "welcomeToPremium": "Welcome to Premium!",
+    "restored": "Restored!",
+    "noPurchasesFound": "No Purchases Found",
+    "purchaseFailed": "Purchase Failed"
   }
 }
 ```
@@ -178,57 +228,51 @@ Must have the **exact same key structure** as `en.json`. No extra keys, no missi
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar",
-    "done": "Listo",
-    "close": "Cerrar",
     "loading": "Cargando...",
     "error": "Algo salió mal",
     "retry": "Intentar de nuevo",
-    "confirm": "Confirmar",
-    "back": "Volver",
-    "next": "Siguiente",
-    "yes": "Sí",
-    "no": "No"
+    "confirm": "Confirmar"
   },
   "explore": {
     "title": "Explorar",
     "searchPlaceholder": "Buscar lugares...",
-    "noPlaces": "Aún no hay lugares guardados",
     "filterButton": "Filtrar"
+  },
+  "emptyState": {
+    "noPlacesFound": "No se encontraron lugares",
+    "saveFirstPlace": "Guarda tu primer lugar",
+    "buildYourMap": "Empieza a construir tu mapa personal añadiendo lugares que te encantan o quieres visitar."
   },
   "addPlace": {
     "title": "Añadir lugar",
     "searchPlaceholder": "Busca un lugar...",
     "saveButton": "Guardar lugar",
-    "namePlaceholder": "Nombre del lugar",
-    "notesPlaceholder": "Añade una nota...",
-    "tagPlaceholder": "Añade una etiqueta..."
+    "notesPlaceholder": "Añade una nota..."
   },
   "map": {
     "title": "Mapa"
   },
-  "settings": {
-    "title": "Configuración",
-    "account": "Cuenta",
+  "profile": {
     "signOut": "Cerrar sesión",
-    "language": "Idioma",
+    "loadingProfile": "Cargando tu perfil...",
+    "manageMaps": "Gestionar mapas",
+    "newMap": "Nuevo mapa",
+    "freeUpgrade": "gratis - mejorar",
+    "premium": "premium",
+    "rateMapVault": "Valorar MapVault",
+    "deleteAccount": "Eliminar cuenta",
     "privacyPolicy": "Política de privacidad",
-    "termsOfService": "Términos de servicio",
-    "support": "Soporte"
+    "termsOfService": "Términos de servicio"
   },
   "auth": {
     "signIn": "Iniciar sesión",
-    "signUp": "Registrarse",
-    "email": "Correo electrónico",
-    "password": "Contraseña",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
-    "continueWithApple": "Continuar con Apple",
     "continueWithGoogle": "Continuar con Google"
   },
   "premium": {
     "upgradeBanner": "Hazte Premium",
-    "limitReached": "Alcanzaste el límite de 20 lugares",
-    "upgradeButton": "Obtener Premium",
-    "price": "€9.99 / año",
+    "limitReached": "Límite de mapas alcanzado",
+    "limitMessage": "Las cuentas gratuitas están limitadas a 1 mapa. Mejora a premium para mapas ilimitados.",
+    "upgradeButton": "Mejorar",
     "restorePurchases": "Restaurar compras",
     "features": {
       "unlimited": "Lugares ilimitados",
@@ -238,16 +282,67 @@ Must have the **exact same key structure** as `en.json`. No extra keys, no missi
   },
   "places": {
     "deleteConfirm": "¿Eliminar este lugar?",
-    "deleteMessage": "Esta acción no se puede deshacer.",
-    "saved": "Lugar guardado",
-    "deleted": "Lugar eliminado",
-    "limitWarning": "Te quedan {{remaining}} lugares en el plan gratuito"
+    "deleteMessage": "Esta acción no se puede deshacer."
   },
-  "errors": {
-    "networkError": "Sin conexión a internet",
-    "authError": "Error de autenticación. Por favor, inicia sesión de nuevo.",
-    "permissionDenied": "No tienes permiso para hacer eso",
-    "notFound": "No encontrado"
+  "filter": {
+    "title": "Filtros",
+    "clearAll": "Limpiar todo",
+    "searchPlaceholder": "Buscar lugares...",
+    "tags": "Etiquetas",
+    "status": "Estado",
+    "all": "Todos",
+    "visited": "Visitado",
+    "notVisited": "No visitado",
+    "switchToMapMessage": "Cambia a un mapa específico para filtrar por etiquetas"
+  },
+  "placeDetail": {
+    "editTags": "Editar etiquetas",
+    "addTags": "Añadir etiquetas",
+    "editNote": "Editar nota",
+    "addNote": "Añade una nota...",
+    "visited": "Visitado",
+    "notVisited": "No visitado",
+    "directions": "Cómo llegar",
+    "deletePlace": "Eliminar lugar",
+    "deleteConfirm": "¿Eliminar {{placeName}}?",
+    "deleteMessage": "Esta acción no se puede deshacer."
+  },
+  "mapSettings": {
+    "title": "Configuración del mapa",
+    "mapName": "Nombre del mapa",
+    "tags": "Etiquetas",
+    "addTag": "Añadir etiqueta",
+    "noTagsYet": "Sin etiquetas aún",
+    "members": "Miembros",
+    "dangerZone": "Zona de peligro",
+    "deleteMap": "Eliminar mapa",
+    "leaveMap": "Abandonar mapa"
+  },
+  "invite": {
+    "processing": "Procesando invitación...",
+    "joined": "¡Te uniste a {{mapName}}!",
+    "createInvite": "Crear invitación",
+    "createAndShare": "Crear y compartir",
+    "copyLink": "Copiar enlace"
+  },
+  "tagEditor": {
+    "editTitle": "Editar etiqueta",
+    "newTitle": "Nueva etiqueta",
+    "namePlaceholder": "Nombre de la etiqueta",
+    "color": "Color",
+    "saveChanges": "Guardar cambios",
+    "createTag": "Crear etiqueta",
+    "deleteTag": "Eliminar etiqueta"
+  },
+  "deleteAccount": {
+    "subscriptionWarning": "Si tienes una suscripción activa, cancélala antes de eliminar tu cuenta.",
+    "deleteButton": "Eliminar mi cuenta"
+  },
+  "paywall": {
+    "welcomeToPremium": "¡Bienvenido a Premium!",
+    "restored": "¡Restaurado!",
+    "noPurchasesFound": "No se encontraron compras",
+    "purchaseFailed": "Error en la compra"
   }
 }
 ```
@@ -307,14 +402,18 @@ export type { SupportedLanguage };
 
 ## Step 4 — Register at App Root
 
-In `app/_layout.tsx`, add this import at the very top of the file, before all other imports:
+In `app/_layout.tsx`, add this import as the **second line of the file**, immediately
+after `import "@/global.css"` and before all other imports:
 
 ```typescript
-import '@/lib/i18n'; // Must be first — initializes i18n before any component renders
+import "@/global.css";
+import '@/lib/i18n'; // Must initialize before any component renders — keep second, after global.css
 ```
 
-**Important:** This import must be the first line. If it loads after a component that
-tries to call `t()`, translations will not be available yet.
+**Warning:** `import "@/global.css"` MUST remain the absolute first import in
+`_layout.tsx`. It applies NativeWind's patches to React Native's `View`, `Text`,
+`Pressable`, etc. Moving it to any position other than first will break all NativeWind
+`className` styling across the entire app. The i18n import goes second — not first.
 
 ---
 
@@ -369,7 +468,7 @@ For every hardcoded string found:
 
 **Before:**
 ```typescript
-<Text>No places saved yet</Text>
+<Text>No places found</Text>
 <TextInput placeholder="Search places..." />
 <Button title="Save Place" />
 ```
@@ -380,7 +479,7 @@ import { useTranslation } from 'react-i18next';
 
 const { t } = useTranslation();
 
-<Text>{t('explore.noPlaces')}</Text>
+<Text>{t('emptyState.noPlacesFound')}</Text>
 <TextInput placeholder={t('explore.searchPlaceholder')} />
 <Button title={t('addPlace.saveButton')} />
 ```
@@ -392,23 +491,23 @@ For strings that contain variables:
 **`en.json`:**
 ```json
 {
-  "places": {
-    "limitWarning": "{{remaining}} places remaining on free plan"
+  "placeDetail": {
+    "deleteConfirm": "Delete {{placeName}}?"
   }
 }
 ```
 
 **Usage:**
 ```typescript
-t('places.limitWarning', { remaining: 5 })
-// Output: "5 places remaining on free plan"
+t('placeDetail.deleteConfirm', { placeName: 'Bar Marsella' })
+// Output: "Delete Bar Marsella?"
 ```
 
 **`es.json`:**
 ```json
 {
-  "places": {
-    "limitWarning": "Te quedan {{remaining}} lugares en el plan gratuito"
+  "placeDetail": {
+    "deleteConfirm": "¿Eliminar {{placeName}}?"
   }
 }
 ```
@@ -531,10 +630,13 @@ Add the script to `package.json` scripts:
 ```json
 {
   "scripts": {
-    "check:i18n": "npx ts-node --project tsconfig.json scripts/check-translations.ts"
+    "check:i18n": "npx tsx scripts/check-translations.ts"
   }
 }
 ```
+
+**Note:** `tsx` does not need `--project tsconfig.json` — it auto-discovers tsconfig
+and handles `resolveJsonModule` natively. Do not use `ts-node` here.
 
 ---
 
@@ -547,12 +649,14 @@ npm install --save-dev husky
 npx husky init
 ```
 
-This creates a `.husky/` directory. Then set up the pre-commit hook:
+This creates a `.husky/` directory and auto-generates `.husky/pre-commit` with default
+content (`npm test`). **Replace the entire contents** of `.husky/pre-commit` with:
 
-```bash
-# .husky/pre-commit
+```
 npm run check:i18n
 ```
+
+Do not append — replace the whole file. The default `npm test` content must be removed.
 
 Verify the file is executable:
 
@@ -616,7 +720,7 @@ export default function MyComponent() {
 
 ```typescript
 import i18n from '@/lib/i18n';
-const message = i18n.t('errors.networkError');
+const message = i18n.t('common.error');
 ```
 
 ### Key naming convention
@@ -628,14 +732,14 @@ common.save
 explore.title
 addPlace.searchPlaceholder
 premium.limitReached
-errors.networkError
+placeDetail.deleteConfirm
 ```
 
 ### Dynamic strings (interpolation)
 
 ```typescript
-// en.json: "limitWarning": "{{remaining}} places remaining"
-t('places.limitWarning', { remaining: 3 })
+// en.json: "deleteConfirm": "Delete {{placeName}}?"
+t('placeDetail.deleteConfirm', { placeName: 'Bar Marsella' })
 ```
 
 ### Pluralization
