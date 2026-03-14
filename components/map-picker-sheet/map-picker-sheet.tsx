@@ -2,6 +2,7 @@ import { forwardRef, useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useTranslation } from 'react-i18next';
 
 interface MapPickerSheetProps {
   maps: Array<{ id: string; name: string }>;
@@ -11,6 +12,7 @@ interface MapPickerSheetProps {
 
 export const MapPickerSheet = forwardRef<BottomSheetModal, MapPickerSheetProps>(
   function MapPickerSheet({ maps, selectedMapId, onSelectMap }, ref) {
+    const { t } = useTranslation();
     const handleSelect = useCallback(
       (mapId: string) => {
         onSelectMap(mapId);
@@ -34,12 +36,12 @@ export const MapPickerSheet = forwardRef<BottomSheetModal, MapPickerSheetProps>(
           {/* Header */}
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>
-              Save to Map
+              {t('mapPickerSheet.title')}
             </Text>
             <Text
               style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}
             >
-              Choose which map to save this place to
+              {t('mapPickerSheet.subtitle')}
             </Text>
           </View>
 

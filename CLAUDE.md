@@ -133,6 +133,18 @@ functions/ ← Edge Functions
 - `docs/mailerlite.md` — MailerLite integration: sync paths, groups, backfill script, error handling
 - Read these before starting any new milestone
 
+## i18n (Localization)
+
+- All user-visible strings must use `t()` from `react-i18next` — never hardcode strings in JSX or Alert calls
+- Locale files: `locales/en.json` (source of truth) and `locales/es.json` (must mirror en.json structure exactly)
+- i18n config: `lib/i18n.ts` — auto-detects device language via `expo-localization`, falls back to English
+- TypeScript types: `types/i18next.d.ts` — wires `en.json` for type-safe `t()` calls
+- Validation: `npm run check:i18n` — runs before every commit (husky pre-commit hook)
+- When adding a new string: add to both `en.json` and `es.json` simultaneously, then use `t('namespace.key')` in code
+- Namespace convention: one namespace per screen/component (e.g. `signIn`, `explore`, `tagEditor`)
+- Interpolation syntax: `t('key', { varName: value })` matches `{{varName}}` in locale files
+- Never translate: brand names (MapVault), role values stored in DB (owner/contributor/member), dynamic error messages from API responses
+
 ## Skills & Commands
 
 Skills (invoked automatically): add-screen, new-component, add-edge-function, create-migration, revenuecat, tanstack-query-hook, rls-policy

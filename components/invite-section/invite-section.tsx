@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, View, Text, Pressable, Share } from 'react-na
 import * as Clipboard from 'expo-clipboard';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { track } from '@/lib/analytics';
 import { APP_DOMAIN } from '@/lib/constants';
 import type { MapInvite } from '@/types';
@@ -25,60 +26,62 @@ function isMaxedOut(invite: MapInvite): boolean {
   return invite.use_count >= invite.max_uses;
 }
 
-function formatExpiry(invite: MapInvite): string {
-  if (!invite.expires_at) return 'No expiry';
-  const date = new Date(invite.expires_at);
-  if (date < new Date()) return 'Expired';
-  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
-  if (days === 1) return '1 day left';
-  return `${days} days left`;
-}
-
-function formatUses(invite: MapInvite): string {
-  if (invite.max_uses === null) return `${invite.use_count} uses`;
-  return `${invite.use_count}/${invite.max_uses} uses`;
-}
-
 function getInviteLink(token: string): string {
   return `${APP_DOMAIN}/invite/${token}`;
 }
 
 export function InviteSection({ invites, isLoading, isOwner, isPremium, onCreateInvite }: InviteSectionProps) {
+  const { t } = useTranslation();
+
+  function formatExpiry(invite: MapInvite): string {
+    if (!invite.expires_at) return t('inviteSection.noExpiry');
+    const date = new Date(invite.expires_at);
+    if (date < new Date()) return t('inviteSection.expired');
+    const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
+    if (days === 1) return t('inviteSection.oneDayLeft');
+    return t('inviteSection.daysLeft', { count: days });
+  }
+
+  function formatUses(invite: MapInvite): string {
+    if (invite.max_uses === null) return t('inviteSection.uses', { count: invite.use_count });
+    return t('inviteSection.usesWithMax', { count: invite.use_count, max: invite.max_uses });
+  }
+
   const handleShare = useCallback(async (token: string, mapId: string) => {
     const link = getInviteLink(token);
     const result = await Share.share({
-      message: `Join my map on MapVault! ${link}`,
+      message: t('inviteSection.shareMessage', { link }),
       url: link,
     });
     if (result.action === Share.sharedAction) {
       track('invite_link_shared', { map_id: mapId });
     }
-  }, []);
+  }, [t]);
 
   const handleCopy = useCallback(async (token: string) => {
     const link = getInviteLink(token);
     await Clipboard.setStringAsync(link);
-    Alert.alert('Copied', 'Invite link copied to clipboard.');
-  }, []);
+    Alert.alert(t('inviteSection.copiedTitle'), t('inviteSection.copiedMessage'));
+  }, [t]);
 
   return (
     <View className="mt-6">
       {/* Section Header */}
       <View className="mb-3 flex-row items-center justify-between">
         <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Invites
+          {t('inviteSection.title')}
         </Text>
         {isOwner && (
           <Pressable
             onPress={() => {
               if (!isPremium) {
                 Alert.alert(
-                  'Premium Feature',
-                  'Invite links are a Premium feature. Upgrade to share your maps.',
+                  t('inviteSection.premiumFeatureTitle'),
+                  t('inviteSection.premiumFeatureMessage'),
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Upgrade',
+                      text: t('common.upgrade'),
                       onPress: () => router.push('/(tabs)/profile/paywall?trigger=invite_limit'),
                     },
                   ],
@@ -91,7 +94,7 @@ export function InviteSection({ invites, isLoading, isOwner, isPremium, onCreate
           >
             <FontAwesome name="plus" size={10} color="#3B82F6" />
             <Text className="text-xs font-semibold text-blue-600">
-              Create Invite
+              {t('inviteSection.createInvite')}
             </Text>
           </Pressable>
         )}
@@ -128,7 +131,7 @@ export function InviteSection({ invites, isLoading, isOwner, isPremium, onCreate
                       {inactive && (
                         <View className="rounded-full bg-red-100 px-2 py-0.5">
                           <Text className="text-xs font-medium text-red-600">
-                            {expired ? 'Expired' : 'Used up'}
+                            {expired ? t('inviteSection.expired') : t('inviteSection.usedUp')}
                           </Text>
                         </View>
                       )}
@@ -168,7 +171,7 @@ export function InviteSection({ invites, isLoading, isOwner, isPremium, onCreate
         </View>
       ) : (
         <Text className="text-sm text-gray-400">
-          No invites yet. Create one to share this map.
+          {t('inviteSection.noInvitesYet')}
         </Text>
       )}
     </View>

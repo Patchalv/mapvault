@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -15,6 +16,7 @@ import { track } from '@/lib/analytics';
 import type { PlacePrediction } from '@/lib/google-places';
 
 export default function AddScreen() {
+  const { t } = useTranslation();
   const { predictions, isSearching, error, search, clear } = usePlaceSearch();
   const { activeMapName, activeMapRole, isAllMaps } = useActiveMap();
   const isMemberOnly = !isAllMaps && activeMapRole === 'member';
@@ -53,12 +55,12 @@ export default function AddScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <View className="px-4 pb-3 pt-2">
-        <Text className="text-2xl font-bold">Add Place</Text>
+        <Text className="text-2xl font-bold">{t('addPlace.title')}</Text>
         {activeMapName && (
           <Text className="mt-1 text-sm text-gray-500">
             {isAllMaps
-              ? "You'll choose a map when saving"
-              : `Saving to ${activeMapName}`}
+              ? t('addPlace.chooseMapWhenSaving')
+              : t('addPlace.savingTo', { mapName: activeMapName })}
           </Text>
         )}
       </View>
@@ -66,7 +68,7 @@ export default function AddScreen() {
       {isMemberOnly && (
         <View className="mx-4 mb-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
           <Text className="text-sm text-amber-800">
-            You&apos;re a viewer of this map. Switch to a map you can edit to add places.
+            {t('addPlace.viewerCannotEdit')}
           </Text>
         </View>
       )}
@@ -74,7 +76,7 @@ export default function AddScreen() {
       <View className="mx-4 mb-3 flex-row items-center rounded-xl bg-gray-100 px-4">
         <TextInput
           className="flex-1 py-3 text-base"
-          placeholder="Search for a place..."
+          placeholder={t('addPlace.searchPlaceholder')}
           placeholderTextColor="#9CA3AF"
           value={query}
           onChangeText={handleChangeText}
@@ -102,7 +104,7 @@ export default function AddScreen() {
       {!query && !isSearching && (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-center text-base text-gray-400">
-            Search for a restaurant, cafe, bar, or any place to add to your map.
+            {t('addPlace.searchHint')}
           </Text>
         </View>
       )}
@@ -110,7 +112,7 @@ export default function AddScreen() {
       {query.length > 0 && !isSearching && !error && predictions.length === 0 && (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-center text-base text-gray-400">
-            No results found. Try a different search.
+            {t('addPlace.noResults')}
           </Text>
         </View>
       )}

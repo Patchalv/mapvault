@@ -1,5 +1,6 @@
 import { Pressable, View, Text, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 interface Rect {
   x: number;
@@ -27,6 +28,7 @@ export function SpotlightTooltip({
   onDismiss,
 }: SpotlightTooltipProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { t } = useTranslation();
 
   // Cutout area with padding
   const cutout = {
@@ -142,7 +144,7 @@ export function SpotlightTooltip({
               {description}
             </Text>
             <Text className="text-xs text-gray-400">
-              Tap anywhere to dismiss
+              {t('spotlightTooltip.tapToDismiss')}
             </Text>
           </View>
         </View>

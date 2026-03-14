@@ -1,13 +1,8 @@
 import { forwardRef, useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useTranslation } from 'react-i18next';
 import type { Tag, VisitedFilter } from '@/types';
-
-const VISITED_OPTIONS: Array<{ value: VisitedFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'visited', label: 'Visited' },
-  { value: 'not_visited', label: 'Not visited' },
-];
 
 interface FilterSheetProps {
   tags: Tag[];
@@ -36,6 +31,14 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
     },
     ref
   ) {
+    const { t } = useTranslation();
+
+    const VISITED_OPTIONS: Array<{ value: VisitedFilter; label: string }> = [
+      { value: 'all', label: t('filterSheet.all') },
+      { value: 'visited', label: t('filterSheet.visited') },
+      { value: 'not_visited', label: t('filterSheet.notVisited') },
+    ];
+
     const handleDismiss = useCallback(() => {
       // No-op — filters apply in real time
     }, []);
@@ -61,18 +64,18 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
             }}
           >
             <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>
-              Filters
+              {t('filterSheet.title')}
             </Text>
             <Pressable onPress={onClearAll}>
               <Text style={{ fontSize: 14, fontWeight: '500', color: '#3B82F6' }}>
-                Clear all
+                {t('filterSheet.clearAll')}
               </Text>
             </Pressable>
           </View>
 
           {/* Search */}
           <BottomSheetTextInput
-            placeholder="Search places..."
+            placeholder={t('filterSheet.searchPlaceholder')}
             value={searchQuery}
             onChangeText={onSetSearchQuery}
             style={{
@@ -100,10 +103,10 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
                   letterSpacing: 0.5,
                 }}
               >
-                Tags
+                {t('filterSheet.tagsLabel')}
               </Text>
               <Text style={{ fontSize: 14, color: '#9CA3AF' }}>
-                Switch to a specific map to filter by tags
+                {t('filterSheet.tagsAllMapsHint')}
               </Text>
             </View>
           ) : tags.length > 0 && (
@@ -118,7 +121,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
                   letterSpacing: 0.5,
                 }}
               >
-                Tags
+                {t('filterSheet.tagsLabel')}
               </Text>
               <View
                 style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
@@ -174,7 +177,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
                 letterSpacing: 0.5,
               }}
             >
-              Status
+              {t('filterSheet.statusLabel')}
             </Text>
             <View
               style={{

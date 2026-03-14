@@ -1,5 +1,6 @@
 import { FlatList, RefreshControl, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { PlaceCard } from '@/components/place-card/place-card';
 import type { MapPlaceWithDetails } from '@/types';
 
@@ -17,6 +18,7 @@ export function PlaceList({
   onRefresh,
 }: PlaceListProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <FlatList
@@ -38,7 +40,7 @@ export function PlaceList({
       }
       ListEmptyComponent={
         <View className="flex-1 items-center justify-center pt-20">
-          <Text className="text-base text-gray-400">No places found</Text>
+          <Text className="text-base text-gray-400">{t('placeList.noPlacesFound')}</Text>
         </View>
       }
     />

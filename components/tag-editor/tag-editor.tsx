@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -38,6 +39,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
     const [emoji, setEmoji] = useState('\u{1F4CD}');
     const [color, setColor] = useState<string>(TAG_COLORS[0]);
     const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const { t } = useTranslation();
 
     const isEditing = !!editingTag;
 
@@ -74,12 +76,12 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
       if (!editingTag) return;
 
       Alert.alert(
-        'Delete Tag',
-        `Delete "${editingTag.name}"? This will remove the tag from all places.`,
+        t('tagEditor.deleteTagTitle'),
+        t('tagEditor.deleteTagMessage', { tagName: editingTag.name }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: () => {
               onDeleteTag({ tagId: editingTag.id, mapId });
@@ -109,7 +111,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
                 marginBottom: 20,
               }}
             >
-              {isEditing ? 'Edit Tag' : 'New Tag'}
+              {isEditing ? t('tagEditor.editTagTitle') : t('tagEditor.newTagTitle')}
             </Text>
 
             {/* Emoji + Name row */}
@@ -140,7 +142,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
               <BottomSheetTextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="Tag name"
+                placeholder={t('tagEditor.tagNamePlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 style={{
                   flex: 1,
@@ -165,7 +167,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
                 letterSpacing: 0.5,
               }}
             >
-              Color
+              {t('tagEditor.colorLabel')}
             </Text>
             <View
               style={{
@@ -218,10 +220,10 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
                 style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}
               >
                 {isPending
-                  ? 'Saving...'
+                  ? t('tagEditor.saving')
                   : isEditing
-                    ? 'Save Changes'
-                    : 'Create Tag'}
+                    ? t('tagEditor.saveChanges')
+                    : t('tagEditor.createTag')}
               </Text>
             </Pressable>
 
@@ -239,7 +241,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
                 <Text
                   style={{ color: '#DC2626', fontSize: 16, fontWeight: '600' }}
                 >
-                  Delete Tag
+                  {t('tagEditor.deleteTag')}
                 </Text>
               </Pressable>
             )}

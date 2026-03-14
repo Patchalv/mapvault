@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, TextInput, Pressable, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import { ErrorState } from '@/components/error-state/error-state';
 import type { Tag } from '@/types';
 
 export default function MapSettingsScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -63,7 +65,7 @@ export default function MapSettingsScreen() {
     updateMap(
       { mapId: id, name: mapName },
       {
-        onError: (err) => Alert.alert('Error', err.message),
+        onError: (err) => Alert.alert(t('common.error'), err.message),
       }
     );
   };
@@ -73,24 +75,24 @@ export default function MapSettingsScreen() {
 
     if (ownedMapCount <= 1) {
       Alert.alert(
-        'Cannot Delete',
-        'You must have at least one map. Create another map before deleting this one.'
+        t('mapSettings.cannotDeleteTitle'),
+        t('mapSettings.cannotDeleteMessage')
       );
       return;
     }
 
     Alert.alert(
-      'Delete Map',
-      `Are you sure you want to delete "${map?.name}"? This will permanently remove all places, tags, and members. This cannot be undone.`,
+      t('mapSettings.deleteMapTitle'),
+      t('mapSettings.deleteMapMessage', { mapName: map?.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             deleteMap(id, {
               onSuccess: () => router.back(),
-              onError: (err) => Alert.alert('Error', err.message),
+              onError: (err) => Alert.alert(t('common.error'), err.message),
             });
           },
         },
@@ -102,17 +104,17 @@ export default function MapSettingsScreen() {
     if (!id) return;
 
     Alert.alert(
-      'Leave Map',
-      `Are you sure you want to leave "${map?.name}"? You will lose access to this map.`,
+      t('mapSettings.leaveMapTitle'),
+      t('mapSettings.leaveMapMessage', { mapName: map?.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Leave',
+          text: t('mapSettings.leave'),
           style: 'destructive',
           onPress: () => {
             leaveMap(id, {
               onSuccess: () => router.back(),
-              onError: (err) => Alert.alert('Error', err.message),
+              onError: (err) => Alert.alert(t('common.error'), err.message),
             });
           },
         },
@@ -134,7 +136,7 @@ export default function MapSettingsScreen() {
     (input: { mapId: string; name: string; emoji: string; color: string }) => {
       createTag(input, {
         onSuccess: () => tagEditorRef.current?.dismiss(),
-        onError: (err) => Alert.alert('Error', err.message),
+        onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
     [createTag]
@@ -150,7 +152,7 @@ export default function MapSettingsScreen() {
     }) => {
       updateTag(input, {
         onSuccess: () => tagEditorRef.current?.dismiss(),
-        onError: (err) => Alert.alert('Error', err.message),
+        onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
     [updateTag]
@@ -160,7 +162,7 @@ export default function MapSettingsScreen() {
     (input: { tagId: string; mapId: string }) => {
       deleteTag(input, {
         onSuccess: () => tagEditorRef.current?.dismiss(),
-        onError: (err) => Alert.alert('Error', err.message),
+        onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
     [deleteTag]
@@ -189,18 +191,18 @@ export default function MapSettingsScreen() {
     (memberId: string, memberName: string, currentRole: string) => {
       if (!id || !isPremium) return;
       const newRole = currentRole === 'contributor' ? 'member' : 'contributor';
-      const newRoleLabel = newRole === 'contributor' ? 'Contributor' : 'Member';
+      const newRoleLabel = newRole === 'contributor' ? t('inviteCreator.contributorLabel') : t('inviteCreator.memberLabel');
       Alert.alert(
-        'Change Role',
-        `Make ${memberName} a ${newRoleLabel}?`,
+        t('mapSettings.changeRoleTitle'),
+        t('mapSettings.changeRoleMessage', { name: memberName, role: newRoleLabel }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
             text: newRoleLabel,
             onPress: () =>
               updateMemberRole(
                 { memberId, mapId: id, newRole },
-                { onError: (err) => Alert.alert('Error', err.message) }
+                { onError: (err) => Alert.alert(t('common.error'), err.message) }
               ),
           },
         ]
@@ -216,7 +218,7 @@ export default function MapSettingsScreen() {
   if (isErrorMaps) {
     return (
       <ErrorState
-        message="Couldn't load map details."
+        message={t('mapSettings.couldntLoadMap')}
         onRetry={refetchMaps}
       />
     );
@@ -225,7 +227,7 @@ export default function MapSettingsScreen() {
   if (!map) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Map not found</Text>
+        <Text className="text-gray-500">{t('mapSettings.mapNotFound')}</Text>
       </View>
     );
   }
@@ -245,7 +247,7 @@ export default function MapSettingsScreen() {
             <FontAwesome name="chevron-left" size={16} color="#374151" />
           </Pressable>
           <Text className="text-lg font-semibold text-gray-900">
-            Map Settings
+            {t('mapSettings.title')}
           </Text>
         </View>
 
@@ -258,7 +260,7 @@ export default function MapSettingsScreen() {
           {/* Map Name */}
           <View className="mb-6">
             <Text className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-              Map Name
+              {t('mapSettings.mapName')}
             </Text>
             {isOwner ? (
               <View className="flex-row items-center gap-3">
@@ -266,7 +268,7 @@ export default function MapSettingsScreen() {
                   value={mapName}
                   onChangeText={setMapName}
                   className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-900"
-                  placeholder="Map name"
+                  placeholder={t('mapSettings.mapNamePlaceholder')}
                 />
                 {hasNameChanged && (
                   <Pressable
@@ -275,7 +277,7 @@ export default function MapSettingsScreen() {
                     className="rounded-xl bg-blue-500 px-4 py-3"
                   >
                     <Text className="text-sm font-semibold text-white">
-                      {isUpdating ? 'Saving...' : 'Save'}
+                      {isUpdating ? t('common.saving') : t('common.save')}
                     </Text>
                   </Pressable>
                 )}
@@ -289,7 +291,7 @@ export default function MapSettingsScreen() {
           <View className="mb-6">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Tags
+                {t('mapSettings.tags')}
               </Text>
               {canEdit && (
                 <Pressable
@@ -298,7 +300,7 @@ export default function MapSettingsScreen() {
                 >
                   <FontAwesome name="plus" size={10} color="#FFFFFF" />
                   <Text className="ml-1.5 text-xs font-semibold text-white">
-                    Add Tag
+                    {t('mapSettings.addTag')}
                   </Text>
                 </Pressable>
               )}
@@ -351,7 +353,7 @@ export default function MapSettingsScreen() {
                 )}
               </View>
             ) : (
-              <Text className="text-sm text-gray-400">No tags yet</Text>
+              <Text className="text-sm text-gray-400">{t('mapSettings.noTagsYet')}</Text>
             )}
           </View>
 
@@ -359,13 +361,13 @@ export default function MapSettingsScreen() {
           <View className="mb-6">
             <View className="mb-3 flex-row items-center justify-between">
               <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                Members
+                {t('mapSettings.members')}
               </Text>
             </View>
             {isLoadingMembers ? (
               <ActivityIndicator size="small" color="#9CA3AF" />
             ) : members?.map((member) => {
-              const name = member.profiles?.display_name ?? 'Unknown';
+              const name = member.profiles?.display_name ?? t('mapSettings.unknown');
               const memberInitials = name
                 .split(' ')
                 .map((w) => w[0])
@@ -407,7 +409,7 @@ export default function MapSettingsScreen() {
                   <View className="flex-1">
                     <Text className="text-base font-medium text-gray-900">
                       {name}
-                      {isCurrentUser ? ' (you)' : ''}
+                      {isCurrentUser ? t('mapSettings.you') : ''}
                     </Text>
                   </View>
                   <View
@@ -444,7 +446,7 @@ export default function MapSettingsScreen() {
           {/* Danger Zone */}
           <View className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
             <Text className="mb-3 text-sm font-semibold uppercase tracking-wide text-red-600">
-              Danger Zone
+              {t('mapSettings.dangerZone')}
             </Text>
             {isOwner ? (
               <Pressable
@@ -453,7 +455,7 @@ export default function MapSettingsScreen() {
                 className="items-center rounded-xl border border-red-300 bg-white py-3"
               >
                 <Text className="text-base font-semibold text-red-600">
-                  {isDeleting ? 'Deleting...' : 'Delete Map'}
+                  {isDeleting ? t('common.deleting') : t('mapSettings.deleteMapButton')}
                 </Text>
               </Pressable>
             ) : (
@@ -463,7 +465,7 @@ export default function MapSettingsScreen() {
                 className="items-center rounded-xl border border-red-300 bg-white py-3"
               >
                 <Text className="text-base font-semibold text-red-600">
-                  {isLeaving ? 'Leaving...' : 'Leave Map'}
+                  {isLeaving ? t('common.leaving') : t('mapSettings.leaveMapButton')}
                 </Text>
               </Pressable>
             )}

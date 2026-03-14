@@ -14,29 +14,31 @@ import { useProfile } from '@/hooks/use-profile';
 import { useDeleteAccount } from '@/hooks/use-delete-account';
 import { logOutUser } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase';
-
-const CONSEQUENCES = [
-  'Your profile and personal data will be permanently deleted',
-  'Maps where you are the sole member will be deleted',
-  'For shared maps, ownership will transfer to another member',
-  'Your visits and saved places will be removed',
-  'Places you added to shared maps will remain but your name will be removed',
-];
+import { useTranslation } from 'react-i18next';
 
 export default function DeleteAccountScreen() {
+  const { t } = useTranslation();
   const { data: profile } = useProfile();
   const { mutate: deleteAccount, isPending } = useDeleteAccount();
+
+  const consequences = [
+    t('deleteAccount.consequence1'),
+    t('deleteAccount.consequence2'),
+    t('deleteAccount.consequence3'),
+    t('deleteAccount.consequence4'),
+    t('deleteAccount.consequence5'),
+  ];
 
   const isPremium = profile?.entitlement === 'premium';
 
   const handleDelete = () => {
     Alert.alert(
-      'Are you sure?',
-      'This will permanently delete your account and all associated data. This cannot be undone.',
+      t('deleteAccount.confirmTitle'),
+      t('deleteAccount.confirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             deleteAccount(undefined, {
@@ -49,10 +51,10 @@ export default function DeleteAccountScreen() {
               },
               onError: (err) => {
                 Alert.alert(
-                  'Deletion Failed',
+                  t('deleteAccount.deletionFailedTitle'),
                   err instanceof Error
                     ? err.message
-                    : 'Something went wrong. Please try again.',
+                    : t('deleteAccount.deletionFailedFallback'),
                 );
               },
             });
@@ -69,7 +71,7 @@ export default function DeleteAccountScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <FontAwesome name="chevron-left" size={18} color="#3B82F6" />
         </Pressable>
-        <Text className="ml-3 text-lg font-semibold">Delete Account</Text>
+        <Text className="ml-3 text-lg font-semibold">{t('deleteAccount.title')}</Text>
       </View>
 
       <ScrollView
@@ -77,18 +79,18 @@ export default function DeleteAccountScreen() {
       >
         {/* Title */}
         <Text className="mt-6 text-xl font-bold text-gray-900">
-          Delete Your Account
+          {t('deleteAccount.heading')}
         </Text>
         <Text className="mt-2 text-base text-gray-500">
-          This action is permanent and cannot be undone.
+          {t('deleteAccount.subtitle')}
         </Text>
 
         {/* Consequences */}
         <Text className="mb-3 mt-6 text-sm font-semibold text-gray-900">
-          What will happen:
+          {t('deleteAccount.whatWillHappen')}
         </Text>
         <View className="rounded-2xl bg-gray-50 p-4">
-          {CONSEQUENCES.map((item) => (
+          {consequences.map((item) => (
             <View key={item} className="mb-2 flex-row">
               <Text className="mr-2 text-sm text-gray-400">{'\u2022'}</Text>
               <Text className="flex-1 text-sm leading-5 text-gray-600">
@@ -102,12 +104,10 @@ export default function DeleteAccountScreen() {
         {isPremium && (
           <View className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <Text className="text-sm font-semibold text-amber-800">
-              Active Subscription
+              {t('deleteAccount.activeSubscriptionTitle')}
             </Text>
             <Text className="mt-1 text-sm leading-5 text-amber-700">
-              You have an active subscription. Deleting your account won&apos;t
-              automatically cancel it. Please cancel in Settings {'>'} Apple ID{' '}
-              {'>'} Subscriptions first.
+              {t('deleteAccount.activeSubscriptionMessage')}
             </Text>
             <Pressable
               className="mt-3"
@@ -118,7 +118,7 @@ export default function DeleteAccountScreen() {
               }
             >
               <Text className="text-sm font-semibold text-amber-800 underline">
-                Open Subscription Settings
+                {t('deleteAccount.openSubscriptionSettings')}
               </Text>
             </Pressable>
           </View>
@@ -136,14 +136,14 @@ export default function DeleteAccountScreen() {
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <Text className="text-base font-bold text-white">
-              Delete My Account
+              {t('deleteAccount.deleteButton')}
             </Text>
           )}
         </Pressable>
 
         {/* Cancel link */}
         <Pressable className="mt-4 items-center py-2" onPress={() => router.back()}>
-          <Text className="text-sm text-gray-500">Cancel</Text>
+          <Text className="text-sm text-gray-500">{t('common.cancel')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

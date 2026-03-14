@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -23,6 +24,7 @@ import { getPlaceDetails } from '@/lib/google-places';
 import { MapPickerSheet } from '@/components/map-picker-sheet/map-picker-sheet';
 
 export default function SaveScreen() {
+  const { t } = useTranslation();
   const { placeId, name, address } = useLocalSearchParams<{
     placeId: string;
     name: string;
@@ -74,7 +76,7 @@ export default function SaveScreen() {
         if (!cancelled) setPlaceDetails(details);
       })
       .catch(() => {
-        if (!cancelled) Alert.alert('Error', 'Failed to load place details.');
+        if (!cancelled) Alert.alert(t('common.error'), t('savePlace.failedToLoadDetails'));
       })
       .finally(() => {
         if (!cancelled) setIsLoadingDetails(false);
@@ -170,9 +172,9 @@ export default function SaveScreen() {
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text className="text-base text-blue-500">Cancel</Text>
+          <Text className="text-base text-blue-500">{t('common.cancel')}</Text>
         </Pressable>
-        <Text className="text-lg font-semibold">Save Place</Text>
+        <Text className="text-lg font-semibold">{t('savePlace.title')}</Text>
         <View className="w-14" />
       </View>
 
@@ -205,7 +207,7 @@ export default function SaveScreen() {
         {tags && tags.length > 0 && (
           <View className="mt-6">
             <Text className="mb-2 text-sm font-medium text-gray-500">
-              Tags
+              {t('savePlace.tags')}
             </Text>
             <ScrollView
               horizontal
@@ -241,10 +243,10 @@ export default function SaveScreen() {
 
         {/* Note */}
         <View className="mt-6">
-          <Text className="mb-2 text-sm font-medium text-gray-500">Note</Text>
+          <Text className="mb-2 text-sm font-medium text-gray-500">{t('savePlace.note')}</Text>
           <TextInput
             className="min-h-[80px] rounded-xl bg-gray-50 px-4 py-3 text-base"
-            placeholder="Add a note..."
+            placeholder={t('savePlace.notePlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={note}
             onChangeText={setNote}
@@ -258,7 +260,7 @@ export default function SaveScreen() {
           className="mt-6 flex-row items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
           onPress={() => setVisited((v) => !v)}
         >
-          <Text className="text-base">Already visited?</Text>
+          <Text className="text-base">{t('savePlace.alreadyVisited')}</Text>
           <View
             className={`h-6 w-6 items-center justify-center rounded-md ${
               visited ? 'bg-blue-500' : 'border-2 border-gray-300'
@@ -276,8 +278,8 @@ export default function SaveScreen() {
           >
             <Text className="text-center text-sm text-blue-500">
               {effectiveMapName
-                ? `Saving to ${effectiveMapName}`
-                : 'Tap to select a map'}
+                ? t('savePlace.savingTo', { mapName: effectiveMapName })
+                : t('savePlace.tapToSelectMap')}
             </Text>
             <FontAwesome
               name="chevron-down"
@@ -288,7 +290,7 @@ export default function SaveScreen() {
           </Pressable>
         ) : activeMapName ? (
           <Text className="mt-6 text-center text-sm text-gray-400">
-            Saving to {activeMapName}
+            {t('savePlace.savingTo', { mapName: activeMapName })}
           </Text>
         ) : null}
 
@@ -310,7 +312,7 @@ export default function SaveScreen() {
                 canSave ? 'text-white' : 'text-gray-400'
               }`}
             >
-              Save Place
+              {t('savePlace.saveButton')}
             </Text>
           )}
         </Pressable>

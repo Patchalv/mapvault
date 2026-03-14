@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import BottomSheet from '@gorhom/bottom-sheet';
@@ -33,6 +34,7 @@ import type { Tag, ViewMode, VisitedFilter } from '@/types';
 const DEFAULT_CENTER: [number, number] = [-3.7038, 40.4168];
 
 export default function ExploreScreen() {
+  const { t } = useTranslation();
   const { focusLat, focusLng } = useLocalSearchParams<{
     focusLat?: string;
     focusLng?: string;
@@ -397,16 +399,16 @@ export default function ExploreScreen() {
                   <FontAwesome name="exclamation-circle" size={32} color="#EF4444" />
                 </View>
                 <Text className="mb-2 text-center text-lg font-semibold text-gray-900">
-                  Couldn&apos;t load places
+                  {t('explore.couldntLoadPlaces')}
                 </Text>
                 <Text className="mb-6 text-center text-sm text-gray-500">
-                  Check your connection and try again.
+                  {t('explore.checkConnectionRetry')}
                 </Text>
                 <Pressable
                   onPress={handleRefresh}
                   className="rounded-full bg-blue-500 px-6 py-3 active:bg-blue-600"
                 >
-                  <Text className="text-base font-semibold text-white">Try Again</Text>
+                  <Text className="text-base font-semibold text-white">{t('common.tryAgain')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -420,7 +422,7 @@ export default function ExploreScreen() {
         </View>
       ) : isErrorPlaces ? (
         <ErrorState
-          message="Couldn't load places. Check your connection and try again."
+          message={t('explore.couldntLoadPlacesFull')}
           onRetry={handleRefresh}
         />
       ) : (
@@ -480,8 +482,8 @@ export default function ExploreScreen() {
       {showFilterSpotlight && filterButtonRect && (
         <SpotlightTooltip
           targetRect={filterButtonRect}
-          title="Filter your places"
-          description="Use filters to find places by tags, visited status, or search by name."
+          title={t('explore.filterTitle')}
+          description={t('explore.filterDescription')}
           onDismiss={dismissSpotlight}
         />
       )}

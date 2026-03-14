@@ -5,6 +5,7 @@ import BottomSheet, {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useTranslation } from 'react-i18next';
 import type { MapPlaceWithDetails, Tag } from '@/types';
 import { openDirections } from '@/lib/directions';
 import { track } from '@/lib/analytics';
@@ -30,6 +31,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
     { place, availableTags, canEdit = true, onToggleVisited, onToggleTag, onUpdateNote, onDelete, onClose },
     ref
   ) {
+    const { t } = useTranslation();
     const isVisited = place?.place_visits[0]?.visited ?? false;
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [isEditingNote, setIsEditingNote] = useState(false);
@@ -79,12 +81,12 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
     const handleDelete = useCallback(() => {
       if (!place) return;
       Alert.alert(
-        'Delete Place',
-        `Are you sure you want to remove "${place.places.name}" from this map?`,
+        t('placeDetailSheet.deletePlaceTitle'),
+        t('placeDetailSheet.deletePlaceMessage', { placeName: place.places.name }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: () => onDelete(place.id),
           },
@@ -150,7 +152,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                         color: '#6B7280',
                       }}
                     >
-                      Edit Tags
+                      {t('placeDetailSheet.editTags')}
                     </Text>
                     <Pressable
                       onPress={() => setIsEditingTags(false)}
@@ -271,7 +273,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                           color: '#9CA3AF',
                         }}
                       >
-                        {place.map_place_tags.length > 0 ? 'Edit' : 'Add tags'}
+                        {place.map_place_tags.length > 0 ? t('placeDetailSheet.editTagsButton') : t('placeDetailSheet.addTagsButton')}
                       </Text>
                     </Pressable>
                   )}
@@ -317,7 +319,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                         color: '#6B7280',
                       }}
                     >
-                      Edit Note
+                      {t('placeDetailSheet.editNote')}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 16 }}>
                       <Pressable onPress={handleCancelNote} hitSlop={8}>
@@ -331,7 +333,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                   <BottomSheetTextInput
                     value={draftNote}
                     onChangeText={setDraftNote}
-                    placeholder="Add a note..."
+                    placeholder={t('placeDetailSheet.notePlaceholder')}
                     multiline
                     style={{
                       backgroundColor: '#F9FAFB',
@@ -401,7 +403,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                           color: '#9CA3AF',
                         }}
                       >
-                        Add note
+                        {t('placeDetailSheet.addNote')}
                       </Text>
                     </View>
                   )}

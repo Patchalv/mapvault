@@ -1,4 +1,5 @@
 import "@/global.css";
+import "@/lib/i18n";
 
 import { useAuth } from "@/hooks/use-auth";
 import { setPostHogInstance } from "@/lib/analytics";

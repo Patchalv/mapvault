@@ -5,6 +5,7 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useEffect, useState } from "react";
 import { Alert, Image, Platform, Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 async function trackIfNewUser(method: 'apple' | 'google') {
   const { data } = await supabase.auth.getUser();
@@ -16,6 +17,7 @@ async function trackIfNewUser(method: 'apple' | 'google') {
 }
 
 export default function SignInScreen() {
+  const { t } = useTranslation();
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   useEffect(() => {
@@ -27,14 +29,14 @@ export default function SignInScreen() {
     try {
       const result = await signInWithApple();
       if (!result.success) {
-        Alert.alert("Sign In Error", result.error);
+        Alert.alert(t('signIn.signInError'), result.error);
       } else {
         trackIfNewUser('apple');
       }
     } catch (e: unknown) {
       const error = e as { code?: string };
       if (error.code !== "ERR_REQUEST_CANCELED") {
-        Alert.alert("Error", "An unexpected error occurred.");
+        Alert.alert(t('common.error'), t('signIn.unexpectedError'));
       }
     }
   };
@@ -43,12 +45,12 @@ export default function SignInScreen() {
     try {
       const result = await signInWithGoogle();
       if (!result.success) {
-        Alert.alert("Sign In Error", result.error);
+        Alert.alert(t('signIn.signInError'), result.error);
       } else {
         trackIfNewUser('google');
       }
     } catch {
-      Alert.alert("Error", "An unexpected error occurred.");
+      Alert.alert(t('common.error'), t('signIn.unexpectedError'));
     }
   };
 
@@ -60,7 +62,7 @@ export default function SignInScreen() {
       />
       <Text className="mb-2 text-4xl font-bold">MapVault</Text>
       <Text className="mb-12 text-base text-gray-500">
-        Save places you love.
+        {t('signIn.tagline')}
       </Text>
 
       <View className="w-full gap-4">
@@ -84,7 +86,7 @@ export default function SignInScreen() {
         >
           <AntDesign name="google" size={24} color="#4285F4" />
           <Text className="text-xl font-medium text-gray-800">
-            Continue with Google
+            {t('signIn.continueWithGoogle')}
           </Text>
         </Pressable>
       </View>

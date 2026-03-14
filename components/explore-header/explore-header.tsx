@@ -2,6 +2,7 @@ import { useState, type RefObject } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useTranslation } from 'react-i18next';
 import { ALL_MAPS_ID } from '@/lib/constants';
 import type { ViewMode } from '@/types';
 
@@ -38,6 +39,7 @@ export function ExploreHeader({
   filterButtonRef,
 }: ExploreHeaderProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   return (
@@ -53,7 +55,7 @@ export function ExploreHeader({
             onPress={() => setDropdownOpen(!dropdownOpen)}
           >
             <Text className="mr-2 text-base font-semibold text-gray-900">
-              {mapName ?? 'No Map'}
+              {mapName ?? t('exploreHeader.noMap')}
             </Text>
             <FontAwesome
               name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
@@ -82,7 +84,7 @@ export function ExploreHeader({
                       : 'text-gray-700'
                   }`}
                 >
-                  All Maps
+                  {t('exploreHeader.allMaps')}
                 </Text>
               </Pressable>
 

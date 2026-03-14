@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { track } from '@/lib/analytics';
 import { useAcceptInvite, type InviteError } from '@/hooks/use-accept-invite';
 import type { MapRole } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 type Status = 'loading' | 'success' | 'error';
 
@@ -16,23 +17,24 @@ interface SuccessData {
   role: MapRole;
 }
 
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  contributor: 'You can add, edit, and remove places.',
-  member: 'You can view places but not edit them.',
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  INVITE_NOT_FOUND: 'This invite link is invalid or has been removed.',
-  INVITE_EXPIRED: 'This invite has expired. Ask the map owner for a new link.',
-  INVITE_MAX_USES: 'This invite has reached its maximum number of uses.',
-  ALREADY_MEMBER: "You're already a member of this map.",
-};
-
 export default function InviteScreen() {
+  const { t } = useTranslation();
   const { token } = useLocalSearchParams<{ token: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { mutateAsync: acceptInvite } = useAcceptInvite();
+
+  const ROLE_DESCRIPTIONS: Record<string, string> = {
+    contributor: t('invite.contributorDescription'),
+    member: t('invite.memberDescription'),
+  };
+
+  const ERROR_MESSAGES: Record<string, string> = {
+    INVITE_NOT_FOUND: t('invite.errorNotFound'),
+    INVITE_EXPIRED: t('invite.errorExpired'),
+    INVITE_MAX_USES: t('invite.errorMaxUses'),
+    ALREADY_MEMBER: t('invite.errorAlreadyMember'),
+  };
 
   const [status, setStatus] = useState<Status>('loading');
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
@@ -67,7 +69,7 @@ export default function InviteScreen() {
         const inviteErr = err as InviteError;
         const code = inviteErr.code;
         setErrorMessage(
-          (code && ERROR_MESSAGES[code]) ?? inviteErr.message ?? 'Something went wrong.'
+          (code && ERROR_MESSAGES[code]) ?? inviteErr.message ?? t('invite.errorFallback')
         );
         setStatus('error');
       }
@@ -89,7 +91,7 @@ export default function InviteScreen() {
         <>
           <ActivityIndicator size="large" color="#3B82F6" />
           <Text className="mt-4 text-base text-gray-500">
-            Processing invite...
+            {t('invite.processing')}
           </Text>
         </>
       )}
@@ -100,10 +102,10 @@ export default function InviteScreen() {
             <FontAwesome name="check-circle" size={32} color="#22C55E" />
           </View>
           <Text className="mb-2 text-center text-lg font-semibold text-gray-900">
-            You joined {successData.mapName}!
+            {t('invite.joinedMap', { mapName: successData.mapName })}
           </Text>
           <Text className="mb-2 text-center text-base capitalize text-gray-700">
-            as a {successData.role}
+            {t('invite.asRole', { role: successData.role })}
           </Text>
           <Text className="mb-8 text-center text-sm text-gray-500">
             {ROLE_DESCRIPTIONS[successData.role] ?? ''}
@@ -113,7 +115,7 @@ export default function InviteScreen() {
             className="rounded-xl bg-blue-500 px-8 py-3"
           >
             <Text className="text-base font-semibold text-white">
-              Open Map
+              {t('invite.openMap')}
             </Text>
           </Pressable>
         </>
@@ -125,7 +127,7 @@ export default function InviteScreen() {
             <FontAwesome name="exclamation-circle" size={32} color="#EF4444" />
           </View>
           <Text className="mb-2 text-center text-lg font-semibold text-gray-900">
-            Invite Error
+            {t('invite.errorTitle')}
           </Text>
           <Text className="mb-8 text-center text-base text-gray-500">
             {errorMessage}
@@ -135,7 +137,7 @@ export default function InviteScreen() {
             className="rounded-xl bg-blue-500 px-8 py-3"
           >
             <Text className="text-base font-semibold text-white">
-              Go to Explore
+              {t('invite.goToExplore')}
             </Text>
           </Pressable>
         </>

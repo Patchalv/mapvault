@@ -1,6 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface EmptyStateProps {
   variant: 'map' | 'list';
@@ -8,6 +9,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ variant }: EmptyStateProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const handleAddPlace = () => {
     router.push('/(tabs)/add');
@@ -24,18 +26,17 @@ export function EmptyState({ variant }: EmptyStateProps) {
             <Text className="text-3xl">📍</Text>
           </View>
           <Text className="mb-2 text-center text-xl font-bold text-gray-900">
-            Save your first place
+            {t('emptyState.title')}
           </Text>
           <Text className="mb-6 text-center text-sm leading-5 text-gray-500">
-            Start building your personal map by adding places you love or want
-            to visit.
+            {t('emptyState.subtitle')}
           </Text>
           <Pressable
             className="rounded-full bg-blue-500 px-6 py-3 active:bg-blue-600"
             onPress={handleAddPlace}
           >
             <Text className="text-base font-semibold text-white">
-              Add a Place
+              {t('emptyState.addButton')}
             </Text>
           </Pressable>
         </View>
@@ -52,17 +53,16 @@ export function EmptyState({ variant }: EmptyStateProps) {
         <Text className="text-3xl">📍</Text>
       </View>
       <Text className="mb-2 text-center text-xl font-bold text-gray-900">
-        Save your first place
+        {t('emptyState.title')}
       </Text>
       <Text className="mb-6 text-center text-sm leading-5 text-gray-500">
-        Start building your personal map by adding places you love or want to
-        visit.
+        {t('emptyState.subtitle')}
       </Text>
       <Pressable
         className="rounded-full bg-blue-500 px-6 py-3 active:bg-blue-600"
         onPress={handleAddPlace}
       >
-        <Text className="text-base font-semibold text-white">Add a Place</Text>
+        <Text className="text-base font-semibold text-white">{t('emptyState.addButton')}</Text>
       </Pressable>
     </View>
   );

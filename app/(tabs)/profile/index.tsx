@@ -1,4 +1,5 @@
 import { ErrorState } from "@/components/error-state/error-state";
+import { useTranslation } from "react-i18next";
 import { LoadingState } from "@/components/loading-state/loading-state";
 import { useActiveMap } from "@/hooks/use-active-map";
 import { useAuth } from "@/hooks/use-auth";
@@ -26,6 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const {
@@ -56,13 +58,13 @@ export default function ProfileScreen() {
   const isError = isErrorProfile || isErrorMaps;
 
   if (isLoading) {
-    return <LoadingState message="Loading your profile..." />;
+    return <LoadingState message={t('profile.loadingProfile')} />;
   }
 
   if (isError) {
     return (
       <ErrorState
-        message="Couldn't load your profile. Check your connection and try again."
+        message={t('profile.couldntLoadProfile')}
         onRetry={() => {
           refetchProfile();
           refetchMaps();
@@ -87,19 +89,19 @@ export default function ProfileScreen() {
     await logOutUser();
     const { error } = await supabase.auth.signOut();
     if (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert(t('common.error'), error.message);
     }
   };
 
   const handleNewMap = () => {
     if (isFree && ownedMapCount >= FREE_TIER.maxMaps) {
       Alert.alert(
-        "Map Limit Reached",
-        "Free accounts are limited to 1 map. Upgrade to premium for unlimited maps.",
+        t('profile.mapLimitTitle'),
+        t('profile.mapLimitMessage'),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t('common.cancel'), style: "cancel" },
           {
-            text: "Upgrade",
+            text: t('common.upgrade'),
             onPress: () =>
               router.push("/(tabs)/profile/paywall?trigger=map_limit"),
           },
@@ -109,12 +111,12 @@ export default function ProfileScreen() {
     }
 
     Alert.prompt(
-      "New Map",
-      "Enter a name for your new map",
+      t('profile.newMapPromptTitle'),
+      t('profile.newMapPromptMessage'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Create",
+          text: t('profile.create'),
           onPress: (name?: string) => {
             if (!name?.trim()) return;
             createMap(
@@ -183,7 +185,7 @@ export default function ProfileScreen() {
               isFree ? "text-gray-600" : "text-amber-700"
             }`}
           >
-            {isFree ? "free - upgrade" : "premium"}
+            {isFree ? t('profile.freeTier') : t('profile.premiumTier')}
           </Text>
         </Pressable>
       </View>
@@ -195,7 +197,7 @@ export default function ProfileScreen() {
       <View className="mb-6">
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-base font-semibold text-gray-900">
-            Manage Maps
+            {t('profile.manageMaps')}
           </Text>
           <Pressable
             onPress={handleNewMap}
@@ -204,7 +206,7 @@ export default function ProfileScreen() {
           >
             <FontAwesome name="plus" size={12} color="#FFFFFF" />
             <Text className="ml-1.5 text-sm font-semibold text-white">
-              New Map
+              {t('profile.newMap')}
             </Text>
           </Pressable>
         </View>
@@ -272,13 +274,13 @@ export default function ProfileScreen() {
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4"
         >
           <Text className="text-sm font-semibold text-amber-900">
-            Upgrade to MapVault Premium
+            {t('profile.upgradeCTATitle')}
           </Text>
           <Text className="mt-1 text-xs text-amber-700">
-            Unlimited maps, places, and sharing with friends.
+            {t('profile.upgradeCTASubtitle')}
           </Text>
           <Text className="mt-2 text-xs font-semibold text-amber-600">
-            Learn more →
+            {t('profile.learnMore')}
           </Text>
         </Pressable>
       )}
@@ -293,7 +295,7 @@ export default function ProfileScreen() {
           className="mb-3 items-center rounded-xl border border-gray-200 bg-gray-50 py-3"
         >
           <Text className="text-base font-semibold text-gray-700">
-            Rate MapVault
+            {t('profile.rateApp')}
           </Text>
         </Pressable>
       )}
@@ -303,7 +305,7 @@ export default function ProfileScreen() {
         onPress={handleSignOut}
         className="items-center rounded-xl border border-red-200 bg-red-50 py-3"
       >
-        <Text className="text-base font-semibold text-red-600">Sign Out</Text>
+        <Text className="text-base font-semibold text-red-600">{t('profile.signOut')}</Text>
       </Pressable>
 
       {/* Legal Links */}
@@ -312,14 +314,14 @@ export default function ProfileScreen() {
           className="text-xs text-gray-400"
           onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
         >
-          Privacy Policy
+          {t('profile.privacyPolicy')}
         </Text>
         <Text className="mx-2 text-xs text-gray-300">|</Text>
         <Text
           className="text-xs text-gray-400"
           onPress={() => Linking.openURL(LEGAL_URLS.terms)}
         >
-          Terms of Service
+          {t('profile.termsOfService')}
         </Text>
       </View>
 
@@ -328,7 +330,7 @@ export default function ProfileScreen() {
         className="mt-3 text-center text-xs text-gray-400"
         onPress={() => router.push("/(tabs)/profile/delete-account")}
       >
-        Delete account
+        {t('profile.deleteAccount')}
       </Text>
     </ScrollView>
   );

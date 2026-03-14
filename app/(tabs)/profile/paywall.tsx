@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, Alert, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +10,7 @@ import { track } from '@/lib/analytics';
 import { LEGAL_URLS } from '@/lib/constants';
 
 export default function PaywallScreen() {
+  const { t } = useTranslation();
   const { trigger } = useLocalSearchParams<{ trigger?: string }>();
   const { data: profile } = useProfile();
   const {
@@ -42,8 +44,8 @@ export default function PaywallScreen() {
     try {
       await purchaseAsync(selectedPackage);
       track('purchase_completed', {});
-      Alert.alert('Welcome to Premium!', 'You now have unlimited access.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('paywall.welcomePremiumTitle'), t('paywall.welcomePremiumMessage'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (err: unknown) {
       // RevenueCat throws with userCancelled flag
@@ -58,8 +60,8 @@ export default function PaywallScreen() {
       }
       track('purchase_failed', { reason: 'error' });
       const message =
-        err instanceof Error ? err.message : 'Purchase failed. Please try again.';
-      Alert.alert('Purchase Failed', message);
+        err instanceof Error ? err.message : t('paywall.purchaseFallbackMessage');
+      Alert.alert(t('paywall.purchaseFailedTitle'), message);
     }
   };
 
@@ -68,18 +70,18 @@ export default function PaywallScreen() {
       onSuccess: (customerInfo) => {
         const hasActive = !!customerInfo.entitlements.active['premium'];
         if (hasActive) {
-          Alert.alert('Restored!', 'Your premium access has been restored.', [
-            { text: 'OK', onPress: () => router.back() },
+          Alert.alert(t('paywall.restoredTitle'), t('paywall.restoredMessage'), [
+            { text: t('common.ok'), onPress: () => router.back() },
           ]);
         } else {
           Alert.alert(
-            'No Purchases Found',
-            'We could not find any previous purchases to restore.',
+            t('paywall.noPurchasesTitle'),
+            t('paywall.noPurchasesMessage'),
           );
         }
       },
       onError: () => {
-        Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        Alert.alert(t('common.error'), t('paywall.restoreErrorMessage'));
       },
     });
   };
@@ -92,15 +94,15 @@ export default function PaywallScreen() {
           <Pressable onPress={() => router.back()} hitSlop={8}>
             <FontAwesome name="chevron-left" size={18} color="#3B82F6" />
           </Pressable>
-          <Text className="ml-3 text-lg font-semibold">Premium</Text>
+          <Text className="ml-3 text-lg font-semibold">{t('paywall.title')}</Text>
         </View>
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-4xl">✨</Text>
           <Text className="mt-4 text-xl font-bold text-gray-900">
-            You&apos;re Premium!
+            {t('paywall.alreadyPremiumTitle')}
           </Text>
           <Text className="mt-2 text-center text-base text-gray-500">
-            You have unlimited access to all MapVault features.
+            {t('paywall.alreadyPremiumSubtitle')}
           </Text>
         </View>
       </SafeAreaView>
@@ -114,36 +116,36 @@ export default function PaywallScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <FontAwesome name="chevron-left" size={18} color="#3B82F6" />
         </Pressable>
-        <Text className="ml-3 text-lg font-semibold">Premium</Text>
+        <Text className="ml-3 text-lg font-semibold">{t('paywall.title')}</Text>
       </View>
 
       <View className="flex-1 px-6 pt-6">
         {/* Hero */}
         <Text className="text-center text-2xl font-bold text-gray-900">
-          Unlock MapVault Premium
+          {t('paywall.unlockTitle')}
         </Text>
         <Text className="mt-2 text-center text-base text-gray-500">
-          Save more places, create unlimited maps, and share with friends.
+          {t('paywall.unlockSubtitle')}
         </Text>
 
         {/* Feature comparison */}
         <View className="mt-8 rounded-2xl bg-gray-50 p-5">
           <View className="mb-3 flex-row">
             <Text className="flex-1 text-sm font-medium text-gray-500">
-              Feature
+              {t('paywall.featureCol')}
             </Text>
             <Text className="w-20 text-center text-sm font-medium text-gray-500">
-              Free
+              {t('paywall.freeCol')}
             </Text>
             <Text className="w-20 text-center text-sm font-medium text-amber-600">
-              Premium
+              {t('paywall.premiumCol')}
             </Text>
           </View>
 
-          <FeatureRow label="Maps" free="1" premium="Unlimited" />
-          <FeatureRow label="Places" free="20" premium="Unlimited" />
-          <FeatureRow label="Invite links" free="—" premium="✓" />
-          <FeatureRow label="Manage roles" free="—" premium="✓" />
+          <FeatureRow label={t('paywall.mapsFeature')} free="1" premium={t('paywall.unlimited')} />
+          <FeatureRow label={t('paywall.placesFeature')} free="20" premium={t('paywall.unlimited')} />
+          <FeatureRow label={t('paywall.inviteLinksFeature')} free="—" premium="✓" />
+          <FeatureRow label={t('paywall.manageRolesFeature')} free="—" premium="✓" />
         </View>
 
         {/* Loading state */}
@@ -154,10 +156,10 @@ export default function PaywallScreen() {
             {/* Price display */}
             <View className="mt-8 items-center rounded-xl border-2 border-blue-500 bg-blue-50 p-5">
               <Text className="text-sm font-semibold text-blue-700">
-                Yearly
+                {t('paywall.yearly')}
               </Text>
               <Text className="mt-1 text-2xl font-bold text-blue-700">
-                {annualPrice}/year
+                {t('paywall.perYear', { price: annualPrice })}
               </Text>
             </View>
 
@@ -173,7 +175,7 @@ export default function PaywallScreen() {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text className="text-base font-bold text-white">
-                  Subscribe
+                  {t('paywall.subscribe')}
                 </Text>
               )}
             </Pressable>
@@ -188,26 +190,26 @@ export default function PaywallScreen() {
                 <ActivityIndicator size="small" color="#6B7280" />
               ) : (
                 <Text className="text-sm text-gray-500 underline">
-                  Restore Purchases
+                  {t('paywall.restorePurchases')}
                 </Text>
               )}
             </Pressable>
 
             {/* Legal links (required by Apple for auto-renewable subscriptions) */}
             <Text className="mt-4 text-center text-xs leading-5 text-gray-400">
-              By subscribing, you agree to our{' '}
+              {t('paywall.legalPrefix')}{' '}
               <Text
                 className="text-xs text-gray-500 underline"
                 onPress={() => Linking.openURL(LEGAL_URLS.terms)}
               >
-                Terms of Service
+                {t('profile.termsOfService')}
               </Text>{' '}
-              and{' '}
+              {t('paywall.legalAnd')}{' '}
               <Text
                 className="text-xs text-gray-500 underline"
                 onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
               >
-                Privacy Policy
+                {t('profile.privacyPolicy')}
               </Text>
               .
             </Text>
