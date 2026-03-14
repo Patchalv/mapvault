@@ -254,7 +254,11 @@ export default function ProfileScreen() {
                         : "text-gray-600"
                   }`}
                 >
-                  {membership.role}
+                  {membership.role === 'owner'
+                    ? t('inviteCreator.ownerLabel')
+                    : membership.role === 'contributor'
+                      ? t('inviteCreator.contributorLabel')
+                      : t('inviteCreator.memberLabel')}
                 </Text>
               </View>
 
