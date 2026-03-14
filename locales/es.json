@@ -245,6 +245,11 @@
   "spotlightTooltip": {
     "tapToDismiss": "Toca en cualquier lugar para cerrar"
   },
+  "tabs": {
+    "explore": "Explorar",
+    "add": "Añadir",
+    "profile": "Perfil"
+  },
   "tagEditor": {
     "editTagTitle": "Editar etiqueta",
     "newTagTitle": "Nueva etiqueta",
