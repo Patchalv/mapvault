@@ -213,11 +213,13 @@ Parse the `Version` field from the output. Compare against the `version` field i
 If the command fails or the `Version` field cannot be parsed, warn the user and continue without blocking — do not silently skip.
 
 **Decision logic:**
+
 - If local version == last build version → 🚫 BLOCKING: version collision, prompt to bump
 - If local version != last build version → ✅ version is new
 - If no previous production builds → ✅ first production build, any version is fine
 
 **If collision detected, ask:**
+
 - Bump patch (e.g. 1.0.0 → 1.0.1) — for bug fixes
 - Bump minor (e.g. 1.0.0 → 1.1.0) — for new features
 - I'll handle it manually — stop and let user edit
@@ -247,7 +249,7 @@ ls {ascApiKeyPath} 2>&1
 ```
 
 - If missing → 🚫 BLOCKING:
-  ```
+  ```text
   🚫 ASC API KEY FILE MISSING
   Expected: {ascApiKeyPath}
   Download AuthKey_{ascApiKeyId}.p8 from App Store Connect →
