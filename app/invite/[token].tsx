@@ -73,9 +73,7 @@ export default function InviteScreen() {
 
         const inviteErr = err as InviteError;
         const code = inviteErr.code;
-        setErrorMessage(
-          (code && ERROR_MESSAGES[code]) ?? inviteErr.message ?? t('invite.errorFallback')
-        );
+        setErrorMessage((code && ERROR_MESSAGES[code]) ?? t('invite.errorFallback'));
         setStatus('error');
       }
     }
