@@ -6,7 +6,7 @@
  *
  * Required env vars:
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *   MAILERLITE_API_KEY, MAILERLITE_FREE_GROUP_ID, MAILERLITE_PREMIUM_GROUP_ID
+ *   MAILERLITE_API_KEY
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -14,15 +14,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MAILERLITE_API_KEY = Deno.env.get("MAILERLITE_API_KEY")!;
-const FREE_GROUP_ID = Deno.env.get("MAILERLITE_FREE_GROUP_ID")!;
-const PREMIUM_GROUP_ID = Deno.env.get("MAILERLITE_PREMIUM_GROUP_ID")!;
 
 for (const [name, val] of Object.entries({
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
   MAILERLITE_API_KEY,
-  FREE_GROUP_ID,
-  PREMIUM_GROUP_ID,
 })) {
   if (!val) {
     console.error(`Missing required env var: ${name}`);
@@ -59,17 +55,8 @@ async function getEntitlements(
 }
 
 // Bulk import up to 1,000 subscribers per call.
-// IMPORTANT: Verify before running in production that MailerLite's
-// POST /api/subscribers/import endpoint honours per-subscriber `groups`.
-// If it doesn't, imported subscribers will have no group membership.
-// Test with 1-2 entries first and confirm group assignment in the dashboard.
-// If groups are ignored, remove the bulkImport path and use single upserts only.
 async function bulkImport(
-  subscribers: Array<{
-    email: string;
-    fields: Record<string, string>;
-    groups: string[];
-  }>,
+  subscribers: Array<{ email: string; fields: Record<string, string> }>,
 ): Promise<void> {
   const res = await fetch("https://connect.mailerlite.com/api/subscribers/import", {
     method: "POST",
@@ -85,52 +72,17 @@ async function bulkImport(
   await res.text(); // consume body
 }
 
-// Single upsert with explicit group reconciliation.
-// MailerLite POST /api/subscribers only ADDS groups (never removes unlisted ones),
-// so we must explicitly remove the opposite group to keep groups mutually exclusive.
+// Single upsert — simple POST /api/subscribers with entitlement field.
 async function upsertOne(
   email: string,
   entitlement: string,
 ): Promise<void> {
-  const groupId = entitlement === "premium" ? PREMIUM_GROUP_ID : FREE_GROUP_ID;
-  const oppositeGroupId =
-    entitlement === "premium" ? FREE_GROUP_ID : PREMIUM_GROUP_ID;
-
-  // Look up existing subscriber to get their ID for group removal
-  const lookupRes = await fetch(
-    `https://connect.mailerlite.com/api/subscribers/${encodeURIComponent(email)}`,
-    { headers: ML_HEADERS, signal: AbortSignal.timeout(10_000) },
-  );
-  if (lookupRes.ok) {
-    const subscriberId = (await lookupRes.json()).data?.id;
-    if (subscriberId) {
-      // Remove from opposite group (idempotent — 404 = not in group = fine)
-      const removeRes = await fetch(
-        `https://connect.mailerlite.com/api/subscribers/${subscriberId}/groups/${oppositeGroupId}`,
-        { method: "DELETE", headers: ML_HEADERS, signal: AbortSignal.timeout(10_000) },
-      );
-      if (!removeRes.ok && removeRes.status !== 404) {
-        console.error(
-          `Group removal failed for ${email} (group ${oppositeGroupId}): ${removeRes.status} ${await removeRes.text()}`,
-        );
-      } else {
-        await removeRes.text(); // consume body
-      }
-    }
-  } else if (lookupRes.status !== 404) {
-    const body = await lookupRes.text();
-    throw new Error(
-      `Subscriber lookup failed for ${email}: ${lookupRes.status} ${body}`,
-    );
-  }
-
   const res = await fetch("https://connect.mailerlite.com/api/subscribers", {
     method: "POST",
     headers: ML_HEADERS,
     body: JSON.stringify({
       email,
       fields: { source: "app", entitlement },
-      groups: [groupId],
     }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -144,6 +96,8 @@ async function upsertOne(
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+type AuthUser = { id: string; email?: string };
 
 async function main() {
   console.log("Starting MailerLite backfill...\n");
@@ -169,7 +123,7 @@ async function main() {
     if (users.length === 0) break;
 
     // Filter out private relay addresses
-    const eligible = users.filter(
+    const eligible = (users as AuthUser[]).filter(
       (u) => u.email && !u.email.endsWith("@privaterelay.appleid.com"),
     );
     totalSkipped += users.length - eligible.length;
@@ -185,58 +139,27 @@ async function main() {
         continue;
       }
 
-      // Build subscriber objects for bulk import
-      const freeSubscribers = eligible
-        .filter((u) => (entitlementMap.get(u.id) ?? "free") === "free")
-        .map((u) => ({
-          email: u.email!,
-          fields: { source: "app", entitlement: "free" },
-          groups: [FREE_GROUP_ID],
-        }));
-
-      const premiumSubscribers = eligible
-        .filter((u) => entitlementMap.get(u.id) === "premium")
-        .map((u) => ({
-          email: u.email!,
-          fields: { source: "app", entitlement: "premium" },
-          groups: [PREMIUM_GROUP_ID],
-        }));
+      const subscribers = eligible.map((u) => ({
+        email: u.email!,
+        fields: { source: "app", entitlement: entitlementMap.get(u.id) ?? "free" },
+      }));
 
       // Attempt bulk import; fall back to single upserts if bulk fails
-      for (const [label, batch] of [
-        ["free", freeSubscribers],
-        ["premium", premiumSubscribers],
-      ] as [string, typeof freeSubscribers][]) {
-        if (batch.length === 0) continue;
-
-        if (batch.length > 10) {
-          try {
-            await bulkImport(batch);
-            totalProcessed += batch.length;
-            console.log(
-              `  Page ${page}: bulk-imported ${batch.length} ${label} subscribers`,
-            );
-          } catch (bulkErr) {
-            console.warn(
-              `  Bulk import failed for ${label} batch, falling back to single upserts:`,
-              bulkErr,
-            );
-            for (const sub of batch) {
-              try {
-                await upsertOne(sub.email, label);
-                totalProcessed++;
-              } catch (singleErr) {
-                console.error(`  Error upserting ${sub.email}:`, singleErr);
-                totalErrors++;
-              }
-              await sleep(500);
-            }
-          }
-        } else {
-          // Small batches: single upserts
-          for (const sub of batch) {
+      if (subscribers.length > 10) {
+        try {
+          await bulkImport(subscribers);
+          totalProcessed += subscribers.length;
+          console.log(
+            `  Page ${page}: bulk-imported ${subscribers.length} subscribers`,
+          );
+        } catch (bulkErr) {
+          console.warn(
+            `  Bulk import failed, falling back to single upserts:`,
+            bulkErr,
+          );
+          for (const sub of subscribers) {
             try {
-              await upsertOne(sub.email, label);
+              await upsertOne(sub.email, sub.fields.entitlement);
               totalProcessed++;
             } catch (singleErr) {
               console.error(`  Error upserting ${sub.email}:`, singleErr);
@@ -244,6 +167,18 @@ async function main() {
             }
             await sleep(500);
           }
+        }
+      } else {
+        // Small batches: single upserts
+        for (const sub of subscribers) {
+          try {
+            await upsertOne(sub.email, sub.fields.entitlement);
+            totalProcessed++;
+          } catch (singleErr) {
+            console.error(`  Error upserting ${sub.email}:`, singleErr);
+            totalErrors++;
+          }
+          await sleep(500);
         }
       }
     }
