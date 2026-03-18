@@ -17,13 +17,14 @@ import type { Profile } from '@/types';
 
 export function useRevenueCat() {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const queryClient = useQueryClient();
   const lastIdentifiedIdRef = useRef<string | null>(null);
   const isIdentifyingRef = useRef(false);
 
   // Configure SDK and identify user when authenticated
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       lastIdentifiedIdRef.current = null; // reset on sign-out so re-login works
       isIdentifyingRef.current = false;
       return;
@@ -32,16 +33,16 @@ export function useRevenueCat() {
     configureRevenueCat();
 
     if (!isRevenueCatReady()) return;
-    if (lastIdentifiedIdRef.current === user.id) return; // already identified
+    if (lastIdentifiedIdRef.current === userId) return; // already identified
     if (isIdentifyingRef.current) return; // logIn in flight
 
     let mounted = true;
     isIdentifyingRef.current = true;
 
-    identifyUser(user.id)
+    identifyUser(userId)
       .then(async () => {
         if (!mounted) return;
-        lastIdentifiedIdRef.current = user.id;
+        lastIdentifiedIdRef.current = userId;
         // Sync entitlement to profile cache as client-side fallback
         try {
           const customerInfo = await Purchases.getCustomerInfo();
@@ -67,7 +68,7 @@ export function useRevenueCat() {
     return () => {
       mounted = false;
     };
-  }, [user, queryClient]);
+  }, [userId, queryClient]);
 
   // Listen for real-time purchase events
   useEffect(() => {
