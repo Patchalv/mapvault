@@ -93,19 +93,17 @@ serve(async (req) => {
       );
     }
 
-    // 6. Sync MailerLite group membership (best-effort — never block 200)
+    // 6. Sync MailerLite entitlement field (best-effort — never block 200)
     try {
       const mlApiKey = Deno.env.get("MAILERLITE_API_KEY");
-      const freeGroupId = Deno.env.get("MAILERLITE_FREE_GROUP_ID");
-      const premiumGroupId = Deno.env.get("MAILERLITE_PREMIUM_GROUP_ID");
 
-      if (mlApiKey && freeGroupId && premiumGroupId) {
+      if (mlApiKey) {
         const { data: authData, error: mlUserError } =
           await supabase.auth.admin.getUserById(app_user_id);
 
         if (mlUserError || !authData?.user) {
           console.error(
-            `MailerLite: could not fetch user ${app_user_id} — skipping group sync`,
+            `MailerLite: could not fetch user ${app_user_id} — skipping sync`,
           );
         } else {
           const email = authData.user.email ?? "";
@@ -116,52 +114,6 @@ serve(async (req) => {
               Authorization: `Bearer ${mlApiKey}`,
             };
 
-            // Look up subscriber ID by email.
-            // MailerLite POST /api/subscribers only ADDS groups (never removes),
-            // so we must have the subscriber ID to remove the old group first.
-            // On non-404 failure, skip the swap entirely to avoid leaving the
-            // subscriber in both groups.
-            const lookupRes = await fetch(
-              `https://connect.mailerlite.com/api/subscribers/${encodeURIComponent(email)}`,
-              { headers: mlHeaders, signal: AbortSignal.timeout(10_000) },
-            );
-            let subscriberId: string | null = null;
-            if (lookupRes.ok) {
-              subscriberId = (await lookupRes.json()).data?.id ?? null;
-            } else if (lookupRes.status === 404) {
-              await lookupRes.text(); // not subscribed yet — skip group swap
-            } else {
-              const body = await lookupRes.text();
-              // Non-404 failure: throw so the inner catch logs and skips the swap.
-              // POST /api/subscribers only adds groups — without the subscriber ID
-              // we cannot remove the old group first, so proceeding would leave
-              // the user in both groups.
-              throw new Error(
-                `MailerLite: subscriber lookup failed for ${email}: ${lookupRes.status} ${body}`,
-              );
-            }
-
-            const removeGroupId =
-              entitlement === "premium" ? freeGroupId : premiumGroupId;
-            const addGroupId =
-              entitlement === "premium" ? premiumGroupId : freeGroupId;
-
-            // Step 1: Remove from old group
-            if (subscriberId) {
-              const removeRes = await fetch(
-                `https://connect.mailerlite.com/api/subscribers/${subscriberId}/groups/${removeGroupId}`,
-                { method: "DELETE", headers: mlHeaders, signal: AbortSignal.timeout(10_000) },
-              );
-              if (!removeRes.ok && removeRes.status !== 404) {
-                console.error(
-                  `MailerLite: group removal failed for ${email} (group ${removeGroupId}): ${removeRes.status} ${await removeRes.text()}`,
-                );
-              } else {
-                await removeRes.text(); // consume body
-              }
-            }
-
-            // Step 2: Add to new group and update entitlement field
             const upsertRes = await fetch(
               "https://connect.mailerlite.com/api/subscribers",
               {
@@ -170,14 +122,13 @@ serve(async (req) => {
                 body: JSON.stringify({
                   email,
                   fields: { source: "app", entitlement },
-                  groups: [addGroupId],
                 }),
                 signal: AbortSignal.timeout(10_000),
               },
             );
             if (!upsertRes.ok) {
               console.error(
-                `MailerLite: upsert to group ${addGroupId} failed for ${email}: ${upsertRes.status} ${await upsertRes.text()}`,
+                `MailerLite: upsert failed for ${email}: ${upsertRes.status} ${await upsertRes.text()}`,
               );
             } else {
               await upsertRes.text(); // consume body
@@ -186,7 +137,7 @@ serve(async (req) => {
         }
       }
     } catch (mlErr) {
-      console.error("MailerLite group sync error (non-fatal):", mlErr);
+      console.error("MailerLite sync error (non-fatal):", mlErr);
     }
 
     return new Response(

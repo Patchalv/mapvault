@@ -13,7 +13,7 @@ serve(async (req) => {
     // No shared-secret check — Supabase's Edge Function webhook type strips
     // custom headers. Auth is enforced by verifying the userId exists in
     // auth.users before making any external API call.
-    type DatabaseWebhookPayload = { record?: { id?: string } };
+    type DatabaseWebhookPayload = { record?: { id?: string; entitlement?: string } };
     const body = (await req.json()) as DatabaseWebhookPayload;
     const userId = body.record?.id;
 
@@ -55,7 +55,7 @@ serve(async (req) => {
 
     const email = user.email ?? "";
 
-    // 4. Skip users with no email or Apple private relay addresses
+    // 3. Skip users with no email or Apple private relay addresses
     if (!email) {
       console.log(`User ${userId} has no email — skipping`);
       return new Response(
@@ -71,9 +71,21 @@ serve(async (req) => {
       );
     }
 
-    // 5. Upsert subscriber in MailerLite
-    const apiKey = Deno.env.get("MAILERLITE_API_KEY")!;
-    const freeGroupId = Deno.env.get("MAILERLITE_FREE_GROUP_ID")!;
+    // 4. Upsert subscriber in MailerLite
+    const apiKey = Deno.env.get("MAILERLITE_API_KEY");
+
+    if (!apiKey) {
+      const err = new Error("MAILERLITE_API_KEY is not configured");
+      console.error(err.message);
+      Sentry.captureException(err, { tags: { function: "sync-to-mailerlite" } });
+      return new Response(
+        JSON.stringify({ message: "MailerLite not configured — logged to Sentry" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // Read entitlement from the inserted profile row (defaults to "free")
+    const entitlement = body.record?.entitlement ?? "free";
 
     const mlResponse = await fetch(
       "https://connect.mailerlite.com/api/subscribers",
@@ -86,8 +98,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           email,
-          fields: { source: "app", entitlement: "free" },
-          groups: [freeGroupId],
+          fields: { source: "app", entitlement },
         }),
       },
     );
