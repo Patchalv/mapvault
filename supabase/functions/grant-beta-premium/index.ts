@@ -14,10 +14,12 @@ Sentry.init({
 serve(async (req) => {
   try {
     // 1. Verify webhook secret
-    const authHeader = req.headers.get("Authorization");
+    // Use x-webhook-secret instead of Authorization — Supabase's gateway
+    // intercepts the Authorization header before it reaches the function.
     const webhookSecret = Deno.env.get("SYNC_WEBHOOK_SECRET");
+    const incomingSecret = req.headers.get("x-webhook-secret");
 
-    if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
+    if (!webhookSecret || incomingSecret !== webhookSecret) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json" } },
