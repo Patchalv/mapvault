@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as Sentry from "npm:@sentry/node";
 
 Sentry.init({
@@ -10,29 +11,19 @@ Sentry.init({
 // Fires from a Supabase Database Webhook on profiles INSERT.
 // Best-effort: always returns 200 — DB is the source of truth, RC sync is
 // supplementary. Errors are logged to Sentry.
+//
+// Auth: no shared secret (Supabase Edge Function webhook type strips custom
+// headers). Instead we verify the user genuinely has premium in the DB before
+// making any RC call, so spoofed payloads cannot grant entitlements.
 
 serve(async (req) => {
   try {
-    // 1. Verify webhook secret
-    // Use x-webhook-secret instead of Authorization — Supabase's gateway
-    // intercepts the Authorization header before it reaches the function.
-    const webhookSecret = Deno.env.get("SYNC_WEBHOOK_SECRET");
-    const incomingSecret = req.headers.get("x-webhook-secret");
-
-    if (!webhookSecret || incomingSecret !== webhookSecret) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // 2. Parse Supabase Database Webhook v2 payload
+    // 1. Parse Supabase Database Webhook payload
     type DatabaseWebhookPayload = {
       record?: { id?: string; entitlement?: string };
     };
     const body = (await req.json()) as DatabaseWebhookPayload;
     const userId = body.record?.id;
-    const entitlement = body.record?.entitlement;
 
     if (!userId) {
       return new Response(
@@ -41,10 +32,32 @@ serve(async (req) => {
       );
     }
 
-    // 3. Only grant RC entitlement for premium users
-    if (entitlement !== "premium") {
+    // 2. Verify the user actually has premium in the DB.
+    // This replaces a shared secret: spoofed payloads cannot grant RC premium
+    // unless the user genuinely has it in profiles.
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("entitlement")
+      .eq("id", userId)
+      .single();
+
+    if (profileError || !profile) {
+      console.error(`Profile lookup failed for ${userId}:`, profileError?.message);
       return new Response(
-        JSON.stringify({ message: `Skipped — entitlement is '${entitlement}'` }),
+        JSON.stringify({ message: "Profile not found — skipped" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // 3. Only grant RC entitlement for premium users
+    if (profile.entitlement !== "premium") {
+      return new Response(
+        JSON.stringify({ message: `Skipped — entitlement is '${profile.entitlement}'` }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
