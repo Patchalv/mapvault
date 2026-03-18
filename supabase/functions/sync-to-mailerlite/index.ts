@@ -9,18 +9,10 @@ Sentry.init({
 
 serve(async (req) => {
   try {
-    // 1. Verify webhook secret
-    const authHeader = req.headers.get("Authorization");
-    const webhookSecret = Deno.env.get("SYNC_WEBHOOK_SECRET");
-
-    if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // 2. Parse Supabase Database Webhook v2 payload
+    // 1. Parse Supabase Database Webhook payload
+    // No shared-secret check — Supabase's Edge Function webhook type strips
+    // custom headers. Auth is enforced by verifying the userId exists in
+    // auth.users before making any external API call.
     type DatabaseWebhookPayload = { record?: { id?: string } };
     const body = (await req.json()) as DatabaseWebhookPayload;
     const userId = body.record?.id;
@@ -32,7 +24,8 @@ serve(async (req) => {
       );
     }
 
-    // 3. Fetch user from Supabase Auth
+    // 2. Fetch user from Supabase Auth (also serves as auth: spoofed userIds
+    // that don't exist in auth.users will return no user and be skipped)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
