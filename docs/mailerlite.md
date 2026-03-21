@@ -86,6 +86,7 @@ Set all secrets in **Supabase Dashboard → Edge Functions → Secrets** (or via
 | Variable | Purpose |
 |---|---|
 | `MAILERLITE_API_KEY` | MailerLite API v2 token; authenticates all calls to `connect.mailerlite.com` |
+| `MAILERLITE_GROUP_ID` | Optional. When set, all subscribers are added to this group on every upsert (sign-up, entitlement change, backfill). Find the ID in MailerLite Dashboard → Groups → click your group → ID is in the URL. |
 | `SYNC_WEBHOOK_SECRET` | Bearer token that Supabase Database Webhook sends to `sync-to-mailerlite`; prevents unauthorized calls to the function |
 
 `SENTRY_DSN` is also required by `sync-to-mailerlite` (shared with other functions) — see `docs/sentry.md`.
@@ -105,16 +106,18 @@ The `revenuecat-webhook` and `delete-account` functions also require RevenueCat 
 SUPABASE_URL=<url> \
 SUPABASE_SERVICE_ROLE_KEY=<key> \
 MAILERLITE_API_KEY=<key> \
+MAILERLITE_GROUP_ID=<group_id> \
 deno run --allow-net --allow-env scripts/backfill-mailerlite.ts
 ```
+
+`MAILERLITE_GROUP_ID` is optional — omit it to skip group assignment during backfill.
 
 **What it does:**
 1. Pages through all users via `supabase.auth.admin.listUsers()` (50 per page).
 2. Skips `@privaterelay.appleid.com` addresses.
 3. Fetches each user's current `entitlement` from `public.profiles`.
-4. For batches with > 10 eligible users, uses `POST /api/subscribers/import` (bulk endpoint, up to 1,000 subscribers per call). Falls back to single upserts if bulk fails.
-5. For single upserts, a 500 ms delay between calls respects the MailerLite free-tier rate limit (120 req/min).
-6. Logs progress: subscribers processed, skipped (private relay), and errors.
+4. Upserts each subscriber individually via `POST /api/subscribers` with a 500 ms delay between calls to respect the MailerLite free-tier rate limit (120 req/min).
+5. Logs progress: subscribers processed, skipped (private relay), and errors.
 
 **Idempotency:** Safe to re-run. `POST /api/subscribers` is an upsert by email — re-running never creates duplicate subscribers. Fields are overwritten with the current value from Supabase.
 

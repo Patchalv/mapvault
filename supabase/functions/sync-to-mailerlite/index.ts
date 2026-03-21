@@ -87,6 +87,8 @@ serve(async (req) => {
     // Read entitlement from the inserted profile row (defaults to "free")
     const entitlement = body.record?.entitlement ?? "free";
 
+    const groupId = Deno.env.get("MAILERLITE_GROUP_ID");
+
     const mlResponse = await fetch(
       "https://connect.mailerlite.com/api/subscribers",
       {
@@ -99,6 +101,7 @@ serve(async (req) => {
         body: JSON.stringify({
           email,
           fields: { source: "app", entitlement },
+          ...(groupId ? { groups: [groupId] } : {}),
         }),
       },
     );

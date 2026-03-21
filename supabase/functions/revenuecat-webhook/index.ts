@@ -114,6 +114,8 @@ serve(async (req) => {
               Authorization: `Bearer ${mlApiKey}`,
             };
 
+            const groupId = Deno.env.get("MAILERLITE_GROUP_ID");
+
             const upsertRes = await fetch(
               "https://connect.mailerlite.com/api/subscribers",
               {
@@ -122,6 +124,7 @@ serve(async (req) => {
                 body: JSON.stringify({
                   email,
                   fields: { source: "app", entitlement },
+                  ...(groupId ? { groups: [groupId] } : {}),
                 }),
                 signal: AbortSignal.timeout(10_000),
               },

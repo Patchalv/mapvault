@@ -7,6 +7,9 @@
  * Required env vars:
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   MAILERLITE_API_KEY
+ *
+ * Optional env vars:
+ *   MAILERLITE_GROUP_ID  — when set, subscribers are added to this group on upsert
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -14,6 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MAILERLITE_API_KEY = Deno.env.get("MAILERLITE_API_KEY")!;
+const MAILERLITE_GROUP_ID = Deno.env.get("MAILERLITE_GROUP_ID");
 
 for (const [name, val] of Object.entries({
   SUPABASE_URL,
@@ -58,6 +62,7 @@ async function getEntitlements(
 async function upsertOne(
   email: string,
   entitlement: string,
+  groupId?: string,
 ): Promise<void> {
   const res = await fetch("https://connect.mailerlite.com/api/subscribers", {
     method: "POST",
@@ -65,6 +70,7 @@ async function upsertOne(
     body: JSON.stringify({
       email,
       fields: { source: "app", entitlement },
+      ...(groupId ? { groups: [groupId] } : {}),
     }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -136,7 +142,7 @@ async function main() {
 
       for (const sub of subscribers) {
         try {
-          await upsertOne(sub.email, sub.fields.entitlement);
+          await upsertOne(sub.email, sub.fields.entitlement, MAILERLITE_GROUP_ID ?? undefined);
           totalProcessed++;
         } catch (singleErr) {
           console.error(`  Error upserting ${sub.email}:`, singleErr);
