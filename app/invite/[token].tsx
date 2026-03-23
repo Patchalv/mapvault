@@ -44,7 +44,12 @@ export default function InviteScreen() {
 
   const [status, setStatus] = useState<Status>('loading');
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const errorMessage = useMemo(
+    () => (errorCode !== null ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.FALLBACK) : null),
+    [errorCode, ERROR_MESSAGES]
+  );
 
   useEffect(() => {
     if (!token || !user) return;
@@ -73,8 +78,7 @@ export default function InviteScreen() {
         if (cancelled) return;
 
         const inviteErr = err as InviteError;
-        const code = inviteErr.code;
-        setErrorMessage(ERROR_MESSAGES[code ?? ''] ?? ERROR_MESSAGES.FALLBACK);
+        setErrorCode(inviteErr.code ?? '');
         setStatus('error');
       }
     }
@@ -84,7 +88,7 @@ export default function InviteScreen() {
     return () => {
       cancelled = true;
     };
-  }, [token, user, acceptInvite, ERROR_MESSAGES]);
+  }, [token, user, acceptInvite]);
 
   return (
     <View
