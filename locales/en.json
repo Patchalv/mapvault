@@ -235,7 +235,9 @@
     "noExpiry": "No expiry",
     "expiresToday": "Expires today",
     "oneDayRemaining": "1 day remaining",
-    "daysRemaining": "{{count}} days remaining"
+    "daysRemaining": "{{count}} days remaining",
+    "uses": "{{count}} uses",
+    "usesWithMax": "{{count}}/{{max}} uses"
   },
   "mapPickerSheet": {
     "title": "Save to Map",

@@ -235,7 +235,9 @@
     "noExpiry": "Sin caducidad",
     "expiresToday": "Caduca hoy",
     "oneDayRemaining": "1 día restante",
-    "daysRemaining": "{{count}} días restantes"
+    "daysRemaining": "{{count}} días restantes",
+    "uses": "{{count}} usos",
+    "usesWithMax": "{{count}}/{{max}} usos"
   },
   "mapPickerSheet": {
     "title": "Guardar en mapa",

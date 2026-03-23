@@ -66,8 +66,8 @@ export default function MapInvitesScreen() {
   );
 
   const formatUses = (invite: MapInvite): string => {
-    if (invite.max_uses === null) return t('inviteSection.uses', { count: invite.use_count });
-    return t('inviteSection.usesWithMax', { count: invite.use_count, max: invite.max_uses });
+    if (invite.max_uses === null) return t('mapInvites.uses', { count: invite.use_count });
+    return t('mapInvites.usesWithMax', { count: invite.use_count, max: invite.max_uses });
   };
 
   const getDaysLabel = (expiresAt: string | null): string => {
@@ -110,7 +110,7 @@ export default function MapInvitesScreen() {
         onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
-    [createInvite, t]
+    [createInvite]
   );
 
   const handleCopy = useCallback(
@@ -124,17 +124,17 @@ export default function MapInvitesScreen() {
   );
 
   const handleShare = useCallback(
-    async (token: string, mapId: string) => {
+    async (token: string) => {
       const link = getInviteLink(token);
       const result = await Share.share({
         message: t('inviteSection.shareMessage', { link }),
         url: link,
       });
-      if (result.action === Share.sharedAction) {
-        track('invite_link_shared', { map_id: mapId });
+      if (result.action === Share.sharedAction && id) {
+        track('invite_link_shared', { map_id: id });
       }
     },
-    [t]
+    [t, id]
   );
 
   const handleRevoke = useCallback(
@@ -175,185 +175,146 @@ export default function MapInvitesScreen() {
     [t, handleRevoke]
   );
 
-  if (isLoading) {
-    return (
-      <BottomSheetModalProvider>
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View
-            style={{ paddingTop: insets.top + 8 }}
-            className="flex-row items-center border-b border-gray-100 px-4 pb-3"
-          >
-            <Pressable
-              onPress={() => router.back()}
-              className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-            >
-              <FontAwesome name="chevron-left" size={16} color="#374151" />
-            </Pressable>
-            <Text className="text-lg font-semibold text-gray-900">
-              {t('mapInvites.title')}
-            </Text>
-          </View>
-          <ActivityIndicator style={{ marginTop: 32 }} />
-        </View>
-      </BottomSheetModalProvider>
-    );
-  }
-
-  if (isError) {
-    return (
-      <BottomSheetModalProvider>
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View
-            style={{ paddingTop: insets.top + 8 }}
-            className="flex-row items-center border-b border-gray-100 px-4 pb-3"
-          >
-            <Pressable
-              onPress={() => router.back()}
-              className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-            >
-              <FontAwesome name="chevron-left" size={16} color="#374151" />
-            </Pressable>
-            <Text className="text-lg font-semibold text-gray-900">
-              {t('mapInvites.title')}
-            </Text>
-          </View>
-          <ErrorState message={t('mapInvites.couldntLoad')} onRetry={refetch} />
-        </View>
-      </BottomSheetModalProvider>
-    );
-  }
+  const header = (
+    <View
+      style={{ paddingTop: insets.top + 8 }}
+      className="flex-row items-center border-b border-gray-100 px-4 pb-3"
+    >
+      <Pressable
+        onPress={() => router.back()}
+        className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+      >
+        <FontAwesome name="chevron-left" size={16} color="#374151" />
+      </Pressable>
+      <Text className="text-lg font-semibold text-gray-900">
+        {t('mapInvites.title')}
+      </Text>
+    </View>
+  );
 
   return (
     <BottomSheetModalProvider>
       <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        {/* Header */}
-        <View
-          style={{ paddingTop: insets.top + 8 }}
-          className="flex-row items-center border-b border-gray-100 px-4 pb-3"
-        >
-          <Pressable
-            onPress={() => router.back()}
-            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+        {header}
+
+        {isLoading ? (
+          <ActivityIndicator style={{ marginTop: 32 }} />
+        ) : isError ? (
+          <ErrorState message={t('mapInvites.couldntLoad')} onRetry={refetch} />
+        ) : (
+          <ScrollView
+            contentContainerStyle={{
+              padding: 20,
+              paddingBottom: insets.bottom + 32,
+            }}
           >
-            <FontAwesome name="chevron-left" size={16} color="#374151" />
-          </Pressable>
-          <Text className="text-lg font-semibold text-gray-900">
-            {t('mapInvites.title')}
-          </Text>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={{
-            padding: 20,
-            paddingBottom: insets.bottom + 32,
-          }}
-        >
-          {/* Description */}
-          <Text className="mb-4 text-sm text-gray-500">
-            {t('mapInvites.description')}
-          </Text>
-
-          {/* Create Invite Button */}
-          <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-              {t('mapInvites.title')}
+            {/* Description */}
+            <Text className="mb-4 text-sm text-gray-500">
+              {t('mapInvites.description')}
             </Text>
-            <Pressable
-              onPress={handleOpenCreator}
-              className="flex-row items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5"
-            >
-              <FontAwesome name="plus" size={10} color="#3B82F6" />
-              <Text className="text-xs font-semibold text-blue-600">
-                {t('inviteSection.createInvite')}
+
+            {/* Create Invite Button */}
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                {t('mapInvites.title')}
               </Text>
-            </Pressable>
-          </View>
-
-          {/* Background refetch indicator */}
-          {isFetching && !isLoading && (
-            <ActivityIndicator size="small" color="#9CA3AF" style={{ marginBottom: 12 }} />
-          )}
-
-          {/* Invite List */}
-          {visibleInvites.length === 0 ? (
-            <View className="items-center py-8">
-              <Text className="text-sm text-gray-400">{t('mapInvites.emptyTitle')}</Text>
-              <Text className="mt-1 text-sm text-gray-400">{t('mapInvites.emptySubtitle')}</Text>
+              <Pressable
+                onPress={handleOpenCreator}
+                className="flex-row items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5"
+              >
+                <FontAwesome name="plus" size={10} color="#3B82F6" />
+                <Text className="text-xs font-semibold text-blue-600">
+                  {t('inviteSection.createInvite')}
+                </Text>
+              </Pressable>
             </View>
-          ) : (
-            <View>
-              {visibleInvites.map((invite) => {
-                const maxed = isMaxedOut(invite);
 
-                return (
-                  <View
-                    key={invite.id}
-                    className={`mb-2 rounded-xl border p-3 ${
-                      maxed ? 'border-gray-100 bg-gray-50' : 'border-gray-100 bg-white'
-                    }`}
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        {/* Role + Status */}
-                        <View className="flex-row items-center gap-2">
-                          <View className="rounded-full bg-blue-100 px-2 py-0.5">
-                            <Text className="text-xs font-medium text-blue-700">
-                              {invite.role === 'contributor'
-                                ? t('common.roles.contributor')
-                                : t('common.roles.member')}
-                            </Text>
-                          </View>
-                          {maxed && (
-                            <View className="rounded-full bg-red-100 px-2 py-0.5">
-                              <Text className="text-xs font-medium text-red-600">
-                                {t('inviteSection.usedUp')}
+            {/* Background refetch indicator */}
+            {isFetching && (
+              <ActivityIndicator size="small" color="#9CA3AF" style={{ marginBottom: 12 }} />
+            )}
+
+            {/* Invite List */}
+            {visibleInvites.length === 0 ? (
+              <View className="items-center py-8">
+                <Text className="text-sm text-gray-400">{t('mapInvites.emptyTitle')}</Text>
+                <Text className="mt-1 text-sm text-gray-400">{t('mapInvites.emptySubtitle')}</Text>
+              </View>
+            ) : (
+              <View>
+                {visibleInvites.map((invite) => {
+                  const maxed = isMaxedOut(invite);
+
+                  return (
+                    <View
+                      key={invite.id}
+                      className={`mb-2 rounded-xl border p-3 ${
+                        maxed ? 'border-gray-100 bg-gray-50' : 'border-gray-100 bg-white'
+                      }`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-1">
+                          {/* Role + Status */}
+                          <View className="flex-row items-center gap-2">
+                            <View className="rounded-full bg-blue-100 px-2 py-0.5">
+                              <Text className="text-xs font-medium text-blue-700">
+                                {invite.role === 'contributor'
+                                  ? t('common.roles.contributor')
+                                  : t('common.roles.member')}
                               </Text>
                             </View>
-                          )}
+                            {maxed && (
+                              <View className="rounded-full bg-red-100 px-2 py-0.5">
+                                <Text className="text-xs font-medium text-red-600">
+                                  {t('inviteSection.usedUp')}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Stats */}
+                          <Text
+                            className={`mt-1.5 text-xs ${maxed ? 'text-gray-400' : 'text-gray-500'}`}
+                          >
+                            {formatUses(invite)} · {getDaysLabel(invite.expires_at ?? null)}
+                          </Text>
                         </View>
 
-                        {/* Stats */}
-                        <Text
-                          className={`mt-1.5 text-xs ${maxed ? 'text-gray-400' : 'text-gray-500'}`}
-                        >
-                          {formatUses(invite)} · {getDaysLabel(invite.expires_at ?? null)}
-                        </Text>
-                      </View>
-
-                      {/* Action buttons */}
-                      <View className="flex-row items-center gap-2">
-                        {!maxed && (
-                          <>
-                            <Pressable
-                              onPress={() => handleCopy(invite.token)}
-                              className="items-center justify-center rounded-lg bg-gray-100 px-3 py-2"
+                        {/* Action buttons */}
+                        <View className="flex-row items-center gap-2">
+                          {!maxed && (
+                            <>
+                              <Pressable
+                                onPress={() => handleCopy(invite.token)}
+                                className="items-center justify-center rounded-lg bg-gray-100 px-3 py-2"
+                              >
+                                <FontAwesome name="copy" size={14} color="#6B7280" />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => handleShare(invite.token)}
+                                className="items-center justify-center rounded-lg bg-blue-500 px-3 py-2"
+                              >
+                                <FontAwesome name="share" size={14} color="#FFFFFF" />
+                              </Pressable>
+                            </>
+                          )}
+                          {isOwner && (
+                            <TouchableOpacity
+                              onPress={() => handleRevokeConfirm(invite.id)}
+                              className="items-center justify-center px-1 py-2"
                             >
-                              <FontAwesome name="copy" size={14} color="#6B7280" />
-                            </Pressable>
-                            <Pressable
-                              onPress={() => handleShare(invite.token, invite.map_id)}
-                              className="items-center justify-center rounded-lg bg-blue-500 px-3 py-2"
-                            >
-                              <FontAwesome name="share" size={14} color="#FFFFFF" />
-                            </Pressable>
-                          </>
-                        )}
-                        {isOwner && (
-                          <TouchableOpacity
-                            onPress={() => handleRevokeConfirm(invite.id)}
-                            className="items-center justify-center px-1 py-2"
-                          >
-                            <Ionicons name="trash-outline" size={20} color="#E8453C" />
-                          </TouchableOpacity>
-                        )}
+                              <Ionicons name="trash-outline" size={20} color="#E8453C" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </ScrollView>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+        )}
       </View>
 
       {/* Invite Creator Bottom Sheet */}
