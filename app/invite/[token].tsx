@@ -34,12 +34,12 @@ export default function InviteScreen() {
     member: t('invite.memberDescription'),
   }), [t]);
 
-  const ERROR_MESSAGES: Record<string, string> = {
+  const ERROR_MESSAGES = useMemo<Record<string, string>>(() => ({
     INVITE_NOT_FOUND: t('invite.errorNotFound'),
     INVITE_EXPIRED: t('invite.errorExpired'),
     INVITE_MAX_USES: t('invite.errorMaxUses'),
     ALREADY_MEMBER: t('invite.errorAlreadyMember'),
-  };
+  }), [t]);
 
   const [status, setStatus] = useState<Status>('loading');
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
@@ -83,7 +83,7 @@ export default function InviteScreen() {
     return () => {
       cancelled = true;
     };
-  }, [token, user]);
+  }, [token, user, acceptInvite, ERROR_MESSAGES, t]);
 
   return (
     <View
