@@ -8,6 +8,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -132,16 +134,19 @@ export default function SaveScreen() {
             visited,
             google_category: googleCategory,
           });
-          // Dismiss the save screen from the add tab stack, then switch
-          // to explore with focus coordinates so the map flies to the new place
-          router.dismiss();
-          router.replace({
-            pathname: '/(tabs)/explore',
-            params: {
-              focusLat: String(placeDetails.latitude),
-              focusLng: String(placeDetails.longitude),
-            },
-          });
+          // Dismiss keyboard first, then navigate after it has had a tick to
+          // begin its animation — prevents keyboard flash during screen transition
+          Keyboard.dismiss();
+          setTimeout(() => {
+            router.dismiss();
+            router.replace({
+              pathname: '/(tabs)/explore',
+              params: {
+                focusLat: String(placeDetails.latitude),
+                focusLng: String(placeDetails.longitude),
+              },
+            });
+          }, 0);
           // Check if this is the user's 10th saved place
           setTimeout(async () => {
             try {
@@ -169,161 +174,169 @@ export default function SaveScreen() {
   const canSave = !isLoadingDetails && !!placeDetails && !!effectiveMapId;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text className="text-base text-blue-500">{t('common.cancel')}</Text>
-        </Pressable>
-        <Text className="text-lg font-semibold">{t('savePlace.title')}</Text>
-        <View className="w-14" />
-      </View>
-
-      <ScrollView
-        className="flex-1 px-4"
-        keyboardShouldPersistTaps="handled"
-        contentContainerClassName="pb-8"
+    <>
+      <TouchableWithoutFeedback
+        onPress={Keyboard.dismiss}
+        accessible={false} // prevents VoiceOver treating the whole screen as one element
       >
-        {/* Place preview */}
-        <View className="mt-4 rounded-xl bg-gray-50 p-4">
-          <Text className="text-lg font-semibold">{name}</Text>
-          {address ? (
-            <Text className="mt-1 text-sm text-gray-500">{address}</Text>
-          ) : null}
-          {googleCategory && (
-            <Text className="mt-1 text-xs capitalize text-gray-400">
-              {googleCategory}
-            </Text>
-          )}
-          {isLoadingDetails && (
-            <ActivityIndicator
-              size="small"
-              className="mt-2 self-start"
-              color="#9CA3AF"
-            />
-          )}
-        </View>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
+              <Pressable onPress={() => router.back()} hitSlop={8}>
+                <Text className="text-base text-blue-500">{t('common.cancel')}</Text>
+              </Pressable>
+              <Text className="text-lg font-semibold">{t('savePlace.title')}</Text>
+              <View className="w-14" />
+            </View>
 
-        {/* Tags */}
-        {tags && tags.length > 0 && (
-          <View className="mt-6">
-            <Text className="mb-2 text-sm font-medium text-gray-500">
-              {t('savePlace.tags')}
-            </Text>
             <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerClassName="gap-2"
+              className="flex-1 px-4"
+              keyboardShouldPersistTaps="handled"
+              contentContainerClassName="pb-8"
             >
-              {tags.map((tag) => {
-                const isSelected = selectedTagIds.includes(tag.id);
-                return (
-                  <Pressable
-                    key={tag.id}
-                    onPress={() => toggleTag(tag.id)}
-                    className={`flex-row items-center rounded-full px-3 py-1.5 ${
-                      isSelected ? 'bg-blue-500' : 'bg-gray-100'
+              {/* Place preview */}
+              <View className="mt-4 rounded-xl bg-gray-50 p-4">
+                <Text className="text-lg font-semibold">{name}</Text>
+                {address ? (
+                  <Text className="mt-1 text-sm text-gray-500">{address}</Text>
+                ) : null}
+                {googleCategory && (
+                  <Text className="mt-1 text-xs capitalize text-gray-400">
+                    {googleCategory}
+                  </Text>
+                )}
+                {isLoadingDetails && (
+                  <ActivityIndicator
+                    size="small"
+                    className="mt-2 self-start"
+                    color="#9CA3AF"
+                  />
+                )}
+              </View>
+
+              {/* Tags */}
+              {tags && tags.length > 0 && (
+                <View className="mt-6">
+                  <Text className="mb-2 text-sm font-medium text-gray-500">
+                    {t('savePlace.tags')}
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerClassName="gap-2"
+                  >
+                    {tags.map((tag) => {
+                      const isSelected = selectedTagIds.includes(tag.id);
+                      return (
+                        <Pressable
+                          key={tag.id}
+                          onPress={() => toggleTag(tag.id)}
+                          className={`flex-row items-center rounded-full px-3 py-1.5 ${
+                            isSelected ? 'bg-blue-500' : 'bg-gray-100'
+                          }`}
+                        >
+                          {tag.emoji && (
+                            <Text className="mr-1 text-sm">{tag.emoji}</Text>
+                          )}
+                          <Text
+                            className={`text-sm font-medium ${
+                              isSelected ? 'text-white' : 'text-gray-700'
+                            }`}
+                          >
+                            {tag.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Note */}
+              <View className="mt-6">
+                <Text className="mb-2 text-sm font-medium text-gray-500">{t('savePlace.note')}</Text>
+                <TextInput
+                  className="min-h-[80px] rounded-xl bg-gray-50 px-4 py-3 text-base"
+                  placeholder={t('savePlace.notePlaceholder')}
+                  placeholderTextColor="#9CA3AF"
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Visited toggle */}
+              <Pressable
+                className="mt-6 flex-row items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
+                onPress={() => setVisited((v) => !v)}
+              >
+                <Text className="text-base">{t('savePlace.alreadyVisited')}</Text>
+                <View
+                  className={`h-6 w-6 items-center justify-center rounded-md ${
+                    visited ? 'bg-blue-500' : 'border-2 border-gray-300'
+                  }`}
+                >
+                  {visited && <Text className="text-xs text-white">✓</Text>}
+                </View>
+              </Pressable>
+
+              {/* Map label */}
+              {isAllMaps ? (
+                <Pressable
+                  className="mt-6 flex-row items-center justify-center"
+                  onPress={() => mapPickerRef.current?.present()}
+                >
+                  <Text className="text-center text-sm text-blue-500">
+                    {effectiveMapName
+                      ? t('savePlace.savingTo', { mapName: effectiveMapName })
+                      : t('savePlace.tapToSelectMap')}
+                  </Text>
+                  <FontAwesome
+                    name="chevron-down"
+                    size={10}
+                    color="#3B82F6"
+                    style={{ marginLeft: 6 }}
+                  />
+                </Pressable>
+              ) : activeMapName ? (
+                <Text className="mt-6 text-center text-sm text-gray-400">
+                  {t('savePlace.savingTo', { mapName: activeMapName })}
+                </Text>
+              ) : null}
+
+              {/* Save button */}
+              <Pressable
+                className={`mt-6 items-center rounded-xl py-3.5 ${
+                  canSave && !addPlace.isPending
+                    ? 'bg-blue-500 active:bg-blue-600'
+                    : 'bg-gray-200'
+                }`}
+                onPress={handleSave}
+                disabled={!canSave || addPlace.isPending}
+              >
+                {addPlace.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text
+                    className={`text-base font-semibold ${
+                      canSave ? 'text-white' : 'text-gray-400'
                     }`}
                   >
-                    {tag.emoji && (
-                      <Text className="mr-1 text-sm">{tag.emoji}</Text>
-                    )}
-                    <Text
-                      className={`text-sm font-medium ${
-                        isSelected ? 'text-white' : 'text-gray-700'
-                      }`}
-                    >
-                      {tag.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    {t('savePlace.saveButton')}
+                  </Text>
+                )}
+              </Pressable>
             </ScrollView>
-          </View>
-        )}
-
-        {/* Note */}
-        <View className="mt-6">
-          <Text className="mb-2 text-sm font-medium text-gray-500">{t('savePlace.note')}</Text>
-          <TextInput
-            className="min-h-[80px] rounded-xl bg-gray-50 px-4 py-3 text-base"
-            placeholder={t('savePlace.notePlaceholder')}
-            placeholderTextColor="#9CA3AF"
-            value={note}
-            onChangeText={setNote}
-            multiline
-            textAlignVertical="top"
-          />
+          </SafeAreaView>
         </View>
-
-        {/* Visited toggle */}
-        <Pressable
-          className="mt-6 flex-row items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
-          onPress={() => setVisited((v) => !v)}
-        >
-          <Text className="text-base">{t('savePlace.alreadyVisited')}</Text>
-          <View
-            className={`h-6 w-6 items-center justify-center rounded-md ${
-              visited ? 'bg-blue-500' : 'border-2 border-gray-300'
-            }`}
-          >
-            {visited && <Text className="text-xs text-white">✓</Text>}
-          </View>
-        </Pressable>
-
-        {/* Map label */}
-        {isAllMaps ? (
-          <Pressable
-            className="mt-6 flex-row items-center justify-center"
-            onPress={() => mapPickerRef.current?.present()}
-          >
-            <Text className="text-center text-sm text-blue-500">
-              {effectiveMapName
-                ? t('savePlace.savingTo', { mapName: effectiveMapName })
-                : t('savePlace.tapToSelectMap')}
-            </Text>
-            <FontAwesome
-              name="chevron-down"
-              size={10}
-              color="#3B82F6"
-              style={{ marginLeft: 6 }}
-            />
-          </Pressable>
-        ) : activeMapName ? (
-          <Text className="mt-6 text-center text-sm text-gray-400">
-            {t('savePlace.savingTo', { mapName: activeMapName })}
-          </Text>
-        ) : null}
-
-        {/* Save button */}
-        <Pressable
-          className={`mt-6 items-center rounded-xl py-3.5 ${
-            canSave && !addPlace.isPending
-              ? 'bg-blue-500 active:bg-blue-600'
-              : 'bg-gray-200'
-          }`}
-          onPress={handleSave}
-          disabled={!canSave || addPlace.isPending}
-        >
-          {addPlace.isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text
-              className={`text-base font-semibold ${
-                canSave ? 'text-white' : 'text-gray-400'
-              }`}
-            >
-              {t('savePlace.saveButton')}
-            </Text>
-          )}
-        </Pressable>
-      </ScrollView>
-
+      </TouchableWithoutFeedback>
       <MapPickerSheet
         ref={mapPickerRef}
         maps={maps}
         selectedMapId={overrideMapId}
         onSelectMap={setOverrideMapId}
       />
-    </SafeAreaView>
+    </>
   );
 }
