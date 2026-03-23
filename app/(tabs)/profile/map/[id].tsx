@@ -160,7 +160,7 @@ export default function MapSettingsScreen() {
         onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
-    [createTag]
+    [createTag, t]
   );
 
   const handleUpdateTag = useCallback(
@@ -176,7 +176,7 @@ export default function MapSettingsScreen() {
         onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
-    [updateTag]
+    [updateTag, t]
   );
 
   const handleDeleteTag = useCallback(
@@ -186,7 +186,7 @@ export default function MapSettingsScreen() {
         onError: (err) => Alert.alert(t('common.error'), err.message),
       });
     },
-    [deleteTag]
+    [deleteTag, t]
   );
 
   const handleOpenInviteCreator = useCallback(() => {
@@ -231,7 +231,7 @@ export default function MapSettingsScreen() {
         ]
       );
     },
-    [id, isPremium, updateMemberRole]
+    [id, isPremium, updateMemberRole, t]
   );
 
   if (isLoadingMaps) {
@@ -261,7 +261,7 @@ export default function MapSettingsScreen() {
         onPress={Keyboard.dismiss}
         accessible={false} // prevents VoiceOver treating the whole screen as one element
       >
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <View className="flex-1 bg-white">
           {/* Header */}
           <View
             style={{ paddingTop: insets.top + 8 }}
@@ -279,6 +279,7 @@ export default function MapSettingsScreen() {
           </View>
 
           <ScrollView
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
               padding: 20,

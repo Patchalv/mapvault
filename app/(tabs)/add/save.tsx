@@ -87,7 +87,7 @@ export default function SaveScreen() {
     return () => {
       cancelled = true;
     };
-  }, [placeId]);
+  }, [placeId, t]);
 
   // Reset selected tags when the effective map changes (tags are per-map)
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function SaveScreen() {
         onPress={Keyboard.dismiss}
         accessible={false} // prevents VoiceOver treating the whole screen as one element
       >
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <View className="flex-1 bg-white">
           <SafeAreaView className="flex-1 bg-white" edges={['top']}>
             <View className="flex-row items-center justify-between px-4 pb-2 pt-2">
               <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -191,6 +191,7 @@ export default function SaveScreen() {
 
             <ScrollView
               className="flex-1 px-4"
+              keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               contentContainerClassName="pb-8"
             >

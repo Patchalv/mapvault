@@ -34,16 +34,22 @@ export default function InviteScreen() {
     member: t('invite.memberDescription'),
   }), [t]);
 
-  const ERROR_MESSAGES: Record<string, string> = {
+  const ERROR_MESSAGES = useMemo<Record<string, string>>(() => ({
     INVITE_NOT_FOUND: t('invite.errorNotFound'),
     INVITE_EXPIRED: t('invite.errorExpired'),
     INVITE_MAX_USES: t('invite.errorMaxUses'),
     ALREADY_MEMBER: t('invite.errorAlreadyMember'),
-  };
+    FALLBACK: t('invite.errorFallback'),
+  }), [t]);
 
   const [status, setStatus] = useState<Status>('loading');
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const errorMessage = useMemo(
+    () => (errorCode !== null ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.FALLBACK) : null),
+    [errorCode, ERROR_MESSAGES]
+  );
 
   useEffect(() => {
     if (!token || !user) return;
@@ -72,8 +78,7 @@ export default function InviteScreen() {
         if (cancelled) return;
 
         const inviteErr = err as InviteError;
-        const code = inviteErr.code;
-        setErrorMessage((code && ERROR_MESSAGES[code]) ?? t('invite.errorFallback'));
+        setErrorCode(inviteErr.code ?? '');
         setStatus('error');
       }
     }
@@ -83,7 +88,7 @@ export default function InviteScreen() {
     return () => {
       cancelled = true;
     };
-  }, [token, user]);
+  }, [token, user, acceptInvite]);
 
   return (
     <View

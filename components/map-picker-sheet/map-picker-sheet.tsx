@@ -5,7 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
 
 interface MapPickerSheetProps {
-  maps: Array<{ id: string; name: string }>;
+  maps: { id: string; name: string }[];
   selectedMapId: string | null;
   onSelectMap: (mapId: string) => void;
 }

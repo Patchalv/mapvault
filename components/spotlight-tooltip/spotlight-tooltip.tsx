@@ -27,7 +27,7 @@ export function SpotlightTooltip({
   description,
   onDismiss,
 }: SpotlightTooltipProps) {
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
 
   // Cutout area with padding

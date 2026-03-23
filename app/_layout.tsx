@@ -74,7 +74,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace("/(tabs)/explore");
       }
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, router]);
 
   return <>{children}</>;
 }

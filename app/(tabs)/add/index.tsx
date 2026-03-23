@@ -60,7 +60,7 @@ export default function AddScreen() {
       onPress={Keyboard.dismiss}
       accessible={false} // prevents VoiceOver treating the whole screen as one element
     >
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View className="flex-1 bg-white">
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
           <View className="px-4 pb-3 pt-2">
             <Text className="text-2xl font-bold">{t('addPlace.title')}</Text>
