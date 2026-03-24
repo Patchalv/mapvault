@@ -122,7 +122,7 @@ export default function ProfileScreen() {
   };
 
   const handleCreateMap = () => {
-    if (!newMapName.trim()) return;
+    if (isCreating || !newMapName.trim()) return;
     setShowNewMapModal(false);
     createMap(
       { name: newMapName.trim() },
@@ -347,7 +347,7 @@ export default function ProfileScreen() {
           onPress={() => setShowNewMapModal(false)}
         >
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View className="w-72 rounded-2xl bg-white p-6">
+            <View className="w-72 rounded-2xl bg-white p-6" onStartShouldSetResponder={() => true}>
               <Text className="mb-1 text-lg font-semibold text-gray-900">
                 {t('profile.newMapPromptTitle')}
               </Text>
