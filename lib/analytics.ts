@@ -41,6 +41,7 @@ type AnalyticsEvents = {
   invite_link_shared: { map_id: string };
   invite_accepted: { map_id: string };
   invites_screen_viewed: { map_id: string };
+  members_page_viewed: { map_id: string };
   invite_revoked: { map_id: string; invite_id: string };
   member_role_changed: { map_id: string; new_role: string };
   paywall_viewed: {

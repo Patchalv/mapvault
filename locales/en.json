@@ -77,8 +77,6 @@
     "tags": "Tags",
     "addTag": "Add Tag",
     "noTagsYet": "No tags yet",
-    "members": "Members",
-    "you": " (you)",
     "dangerZone": "Danger Zone",
     "cannotDeleteTitle": "Cannot Delete",
     "cannotDeleteMessage": "You must have at least one map. Create another map before deleting this one.",
@@ -88,8 +86,6 @@
     "leaveMapMessage": "Are you sure you want to leave \"{{mapName}}\"? You will lose access to this map.",
     "leave": "Leave",
     "mapNotFound": "Map not found",
-    "changeRoleTitle": "Change Role",
-    "changeRoleMessage": "Make {{name}} a {{role}}?",
     "deleteMapButton": "Delete Map",
     "leaveMapButton": "Leave Map",
     "couldntLoadMap": "Couldn't load map details.",
@@ -239,6 +235,16 @@
     "daysRemaining": "{{count}} days remaining",
     "uses": "{{count}} uses",
     "usesWithMax": "{{count}}/{{max}} uses"
+  },
+  "mapMembers": {
+    "title": "Members",
+    "description_one": "1 person has access to this map",
+    "description_other": "{{count}} people have access to this map",
+    "pageDescription": "People who have access to this map.",
+    "you": " (you)",
+    "noMembers": "Looks like there are no members in this map...",
+    "changeRoleTitle": "Change Role",
+    "changeRoleMessage": "Make {{name}} a {{role}}?"
   },
   "mapPickerSheet": {
     "title": "Save to Map",

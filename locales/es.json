@@ -77,8 +77,6 @@
     "tags": "Etiquetas",
     "addTag": "Añadir etiqueta",
     "noTagsYet": "Sin etiquetas aún",
-    "members": "Miembros",
-    "you": " (tú)",
     "dangerZone": "Zona peligrosa",
     "cannotDeleteTitle": "No se puede eliminar",
     "cannotDeleteMessage": "Debes tener al menos un mapa. Crea otro mapa antes de eliminar éste.",
@@ -88,8 +86,6 @@
     "leaveMapMessage": "¿Seguro que quieres abandonar \"{{mapName}}\"? Perderás el acceso a este mapa.",
     "leave": "Abandonar",
     "mapNotFound": "Mapa no encontrado",
-    "changeRoleTitle": "Cambiar rol",
-    "changeRoleMessage": "¿Hacer {{name}} un {{role}}?",
     "deleteMapButton": "Eliminar mapa",
     "leaveMapButton": "Abandonar mapa",
     "couldntLoadMap": "No se pudieron cargar los detalles del mapa.",
@@ -239,6 +235,16 @@
     "daysRemaining": "{{count}} días restantes",
     "uses": "{{count}} usos",
     "usesWithMax": "{{count}}/{{max}} usos"
+  },
+  "mapMembers": {
+    "title": "Miembros",
+    "description_one": "1 persona tiene acceso a este mapa",
+    "description_other": "{{count}} personas tienen acceso a este mapa",
+    "pageDescription": "Personas que tienen acceso a este mapa.",
+    "you": " (tú)",
+    "noMembers": "Parece que no hay miembros en este mapa...",
+    "changeRoleTitle": "Cambiar Rol",
+    "changeRoleMessage": "¿Hacer {{name}} un {{role}}?"
   },
   "mapPickerSheet": {
     "title": "Guardar en mapa",

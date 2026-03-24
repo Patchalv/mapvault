@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -15,17 +15,15 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useAuth } from '@/hooks/use-auth';
 import { useMaps } from '@/hooks/use-maps';
-import { useProfile } from '@/hooks/use-profile';
 import { useTags } from '@/hooks/use-tags';
 import { useMapMembers } from '@/hooks/use-map-members';
 import { useUpdateMap } from '@/hooks/use-update-map';
 import { useDeleteMap } from '@/hooks/use-delete-map';
 import { useLeaveMap } from '@/hooks/use-leave-map';
 import { useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-manage-tags';
-import { useUpdateMemberRole } from '@/hooks/use-update-member-role';
 import { TagEditor } from '@/components/tag-editor/tag-editor';
+import { Spinner } from '@/components/spinner/spinner';
 import { LinkCard, LINK_CARD_ICON_SIZE, LINK_CARD_ICON_COLOR } from '@/components/link-card/link-card';
 import { LoadingState } from '@/components/loading-state/loading-state';
 import { ErrorState } from '@/components/error-state/error-state';
@@ -36,18 +34,15 @@ export default function MapSettingsScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
   const { data: mapMembers, isLoading: isLoadingMaps, isError: isErrorMaps, refetch: refetchMaps } = useMaps();
   const { data: tags, isLoading: isLoadingTags } = useTags(id ?? null);
-  const { data: members, isLoading: isLoadingMembers } = useMapMembers(id ?? null);
+  const { data: members, isLoading: isLoadingMembers, isError: isMembersError } = useMapMembers(id ?? null);
   const { mutate: updateMap, isPending: isUpdating } = useUpdateMap();
   const { mutate: deleteMap, isPending: isDeleting } = useDeleteMap();
   const { mutate: leaveMap, isPending: isLeaving } = useLeaveMap();
   const { mutate: createTag, isPending: isCreatingTag } = useCreateTag();
   const { mutate: updateTag, isPending: isUpdatingTag } = useUpdateTag();
   const { mutate: deleteTag, isPending: isDeletingTag } = useDeleteTag();
-  const { data: profile } = useProfile();
-  const { mutate: updateMemberRole } = useUpdateMemberRole();
   const tagEditorRef = useRef<BottomSheetModal>(null);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
 
@@ -56,14 +51,7 @@ export default function MapSettingsScreen() {
   const map = membership?.maps;
   const isOwner = membership?.role === 'owner';
   const canEdit = membership?.role === 'owner' || membership?.role === 'contributor';
-  const isPremium = profile?.entitlement === 'premium';
   const ownedMapCount = mapMembers?.filter((m) => m.role === 'owner').length ?? 0;
-
-  const ROLE_LABELS = useMemo<Record<string, string>>(() => ({
-    owner: t('common.roles.owner'),
-    contributor: t('common.roles.contributor'),
-    member: t('common.roles.member'),
-  }), [t]);
 
   const [mapName, setMapName] = useState(map?.name ?? '');
   const hasNameChanged = mapName.trim() !== (map?.name ?? '');
@@ -179,31 +167,6 @@ export default function MapSettingsScreen() {
       });
     },
     [deleteTag, t]
-  );
-
-  const handleChangeRole = useCallback(
-    (memberId: string, memberName: string, currentRole: string) => {
-      Keyboard.dismiss();
-      if (!id || !isPremium) return;
-      const newRole = currentRole === 'contributor' ? 'member' : 'contributor';
-      const newRoleLabel = newRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member');
-      Alert.alert(
-        t('mapSettings.changeRoleTitle'),
-        t('mapSettings.changeRoleMessage', { name: memberName, role: newRoleLabel }),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: newRoleLabel,
-            onPress: () =>
-              updateMemberRole(
-                { memberId, mapId: id, newRole },
-                { onError: (err) => Alert.alert(t('common.error'), err.message) }
-              ),
-          },
-        ]
-      );
-    },
-    [id, isPremium, updateMemberRole, t]
   );
 
   if (isLoadingMaps) {
@@ -363,81 +326,18 @@ export default function MapSettingsScreen() {
               )}
             </View>
 
-            {/* Members Section */}
-            <View className="mb-6">
-              <View className="mb-3 flex-row items-center justify-between">
-                <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                  {t('mapSettings.members')}
-                </Text>
-              </View>
+            {/* Members */}
+            <View className="mb-4">
               {isLoadingMembers ? (
-                <ActivityIndicator size="small" color="#9CA3AF" />
-              ) : members?.map((member) => {
-                const name = member.profiles?.display_name ?? t('mapSettings.unknown');
-                const memberInitials = name
-                  .split(' ')
-                  .map((w) => w[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2);
-                const isCurrentUser = member.user_id === user?.id;
-                const canChangeRole =
-                  isOwner && isPremium && !isCurrentUser && member.role !== 'owner';
-
-                const roleBadgeColor =
-                  member.role === 'owner'
-                    ? 'bg-blue-100'
-                    : member.role === 'contributor'
-                      ? 'bg-green-100'
-                      : 'bg-gray-100';
-                const roleTextColor =
-                  member.role === 'owner'
-                    ? 'text-blue-700'
-                    : member.role === 'contributor'
-                      ? 'text-green-700'
-                      : 'text-gray-600';
-
-                return (
-                  <Pressable
-                    key={member.id}
-                    onPress={
-                      canChangeRole
-                        ? () => handleChangeRole(member.id, name, member.role)
-                        : undefined
-                    }
-                    className="mb-2 flex-row items-center rounded-xl border border-gray-100 p-3"
-                  >
-                    <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-gray-200">
-                      <Text className="text-sm font-semibold text-gray-600">
-                        {memberInitials}
-                      </Text>
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-base font-medium text-gray-900">
-                        {name}
-                        {isCurrentUser ? t('mapSettings.you') : ''}
-                      </Text>
-                    </View>
-                    <View
-                      className={`rounded-full px-2 py-0.5 ${roleBadgeColor}`}
-                    >
-                      <Text
-                        className={`text-xs font-medium ${roleTextColor}`}
-                      >
-                        {ROLE_LABELS[member.role] ?? member.role}
-                      </Text>
-                    </View>
-                    {canChangeRole && (
-                      <FontAwesome
-                        name="chevron-right"
-                        size={10}
-                        color="#9CA3AF"
-                        style={{ marginLeft: 8 }}
-                      />
-                    )}
-                  </Pressable>
-                );
-              })}
+                <Spinner />
+              ) : (
+                <LinkCard
+                  icon={<Ionicons name="people-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
+                  title={t('mapMembers.title')}
+                  subtitle={isMembersError ? undefined : t('mapMembers.description', { count: members?.length ?? 0 })}
+                  onPress={() => router.push(`/(tabs)/profile/map/${id}/members`)}
+                />
+              )}
             </View>
 
             {/* Invites */}
