@@ -360,9 +360,10 @@ export default function SaveScreen() {
           onCreateTag={({ mapId: initiatingMapId, name, emoji, color }) => {
             createTag.mutate({ mapId: initiatingMapId, name, emoji, color }, {
               onSuccess: (newTag) => {
-                // Guard: if the user switched maps while the tag was being created, discard the result
-                if (effectiveMapId !== initiatingMapId) return;
-                setSelectedTagIds((prev) => [...prev, newTag.id]);
+                // Only add the tag to the selection if the user is still on the same map
+                if (effectiveMapId === initiatingMapId) {
+                  setSelectedTagIds((prev) => [...prev, newTag.id]);
+                }
                 tagEditorRef.current?.dismiss();
                 setTagEditorKey((k) => k + 1);
               },
