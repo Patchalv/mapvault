@@ -39,7 +39,7 @@ function sortMembers(members: MapMember[]): MapMember[] {
     return new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
   };
   return [
-    ...members.filter((m) => m.role === 'owner'),
+    ...members.filter((m) => m.role === 'owner').sort(byNameThenJoined),
     ...members.filter((m) => m.role === 'contributor').sort(byNameThenJoined),
     ...members.filter((m) => m.role === 'member').sort(byNameThenJoined),
   ];

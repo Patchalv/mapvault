@@ -36,7 +36,7 @@ export default function MapSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { data: mapMembers, isLoading: isLoadingMaps, isError: isErrorMaps, refetch: refetchMaps } = useMaps();
   const { data: tags, isLoading: isLoadingTags } = useTags(id ?? null);
-  const { data: members, isLoading: isLoadingMembers } = useMapMembers(id ?? null);
+  const { data: members, isLoading: isLoadingMembers, isError: isMembersError } = useMapMembers(id ?? null);
   const { mutate: updateMap, isPending: isUpdating } = useUpdateMap();
   const { mutate: deleteMap, isPending: isDeleting } = useDeleteMap();
   const { mutate: leaveMap, isPending: isLeaving } = useLeaveMap();
@@ -334,7 +334,7 @@ export default function MapSettingsScreen() {
                 <LinkCard
                   icon={<Ionicons name="people-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
                   title={t('mapMembers.title')}
-                  subtitle={t('mapMembers.description', { count: members?.length ?? 0 })}
+                  subtitle={isMembersError ? undefined : t('mapMembers.description', { count: members?.length ?? 0 })}
                   onPress={() => router.push(`/(tabs)/profile/map/${id}/members`)}
                 />
               )}
