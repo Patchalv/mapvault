@@ -23,6 +23,7 @@ import { useInvites } from '@/hooks/use-invites';
 import { useCreateInvite } from '@/hooks/use-create-invite';
 import { InviteCreator } from '@/components/invite-creator/invite-creator';
 import { ErrorState } from '@/components/error-state/error-state';
+import { Spinner } from '@/components/spinner/spinner';
 import { track } from '@/lib/analytics';
 import { APP_DOMAIN } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
@@ -197,7 +198,9 @@ export default function MapInvitesScreen() {
         {header}
 
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 32 }} />
+          <View className="mt-8 items-center">
+            <Spinner />
+          </View>
         ) : isError ? (
           <ErrorState message={t('mapInvites.couldntLoad')} onRetry={refetch} />
         ) : (
