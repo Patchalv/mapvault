@@ -68,16 +68,14 @@ export default function MapMembersScreen() {
     (memberId: string, memberName: string, currentRole: string) => {
       if (!id || !isPremiumOwner) return;
       const targetRole = currentRole === 'contributor' ? 'member' : 'contributor';
+      const targetRoleLabel = targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member');
       Alert.alert(
         t('mapMembers.changeRoleTitle'),
-        t('mapMembers.changeRoleMessage', {
-          name: memberName,
-          role: targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member'),
-        }),
+        t('mapMembers.changeRoleMessage', { name: memberName, role: targetRoleLabel }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
-            text: targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member'),
+            text: targetRoleLabel,
             onPress: () =>
               updateMemberRole(
                 { memberId, mapId: id, newRole: targetRole },
