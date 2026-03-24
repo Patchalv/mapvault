@@ -18,6 +18,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useActiveMap } from '@/hooks/use-active-map';
 import { useTags } from '@/hooks/use-tags';
 import { useAddPlace } from '@/hooks/use-add-place';
+import { useCreateTag } from '@/hooks/use-manage-tags';
+import { TagEditor } from '@/components/tag-editor/tag-editor';
 import { useFreemiumGate } from '@/hooks/use-freemium-gate';
 import { useAppReview } from '@/hooks/use-app-review';
 import { track } from '@/lib/analytics';
@@ -44,6 +46,9 @@ export default function SaveScreen() {
 
   const { data: tags } = useTags(effectiveMapId);
   const addPlace = useAddPlace();
+  const createTag = useCreateTag();
+  const tagEditorRef = useRef<BottomSheetModal>(null);
+  const [tagEditorKey, setTagEditorKey] = useState(0);
   const { handleMutationError } = useFreemiumGate();
   const { maybeRequestReview } = useAppReview();
   const didSaveRef = useRef(false);
@@ -216,7 +221,7 @@ export default function SaveScreen() {
               </View>
 
               {/* Tags */}
-              {tags && tags.length > 0 && (
+              {effectiveMapId && (
                 <View className="mt-6">
                   <Text className="mb-2 text-sm font-medium text-gray-500">
                     {t('savePlace.tags')}
@@ -226,7 +231,7 @@ export default function SaveScreen() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerClassName="gap-2"
                   >
-                    {tags.map((tag) => {
+                    {tags?.map((tag) => {
                       const isSelected = selectedTagIds.includes(tag.id);
                       return (
                         <Pressable
@@ -249,6 +254,14 @@ export default function SaveScreen() {
                         </Pressable>
                       );
                     })}
+                    <Pressable
+                      onPress={() => tagEditorRef.current?.present()}
+                      className="flex-row items-center rounded-full bg-gray-100 px-3 py-1.5"
+                    >
+                      <Text className="text-sm font-medium text-gray-500">
+                        + {t('savePlace.newTag')}
+                      </Text>
+                    </Pressable>
                   </ScrollView>
                 </View>
               )}
@@ -338,6 +351,27 @@ export default function SaveScreen() {
         selectedMapId={overrideMapId}
         onSelectMap={setOverrideMapId}
       />
+      {effectiveMapId && (
+        <TagEditor
+          key={tagEditorKey}
+          ref={tagEditorRef}
+          mapId={effectiveMapId}
+          editingTag={null}
+          onCreateTag={({ mapId, name, emoji, color }) => {
+            createTag.mutate({ mapId, name, emoji, color }, {
+              onSuccess: (newTag) => {
+                setSelectedTagIds((prev) => [...prev, newTag.id]);
+                tagEditorRef.current?.dismiss();
+                setTagEditorKey((k) => k + 1);
+              },
+              onError: (err) => Alert.alert(t('common.error'), err.message),
+            });
+          }}
+          onUpdateTag={() => {}} // create-only mode
+          onDeleteTag={() => {}} // create-only mode
+          isPending={createTag.isPending}
+        />
+      )}
     </>
   );
 }
