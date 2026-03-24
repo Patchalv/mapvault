@@ -57,12 +57,6 @@ export default function MapMembersScreen() {
 
   const isPremiumOwner = isOwner && profile?.entitlement === 'premium';
 
-  const getRoleLabel = (role: string): string => {
-    if (role === 'owner') return t('common.roles.owner');
-    if (role === 'contributor') return t('common.roles.contributor');
-    return t('common.roles.member');
-  };
-
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -78,12 +72,12 @@ export default function MapMembersScreen() {
         t('mapMembers.changeRoleTitle'),
         t('mapMembers.changeRoleMessage', {
           name: memberName,
-          role: getRoleLabel(targetRole),
+          role: targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member'),
         }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
-            text: getRoleLabel(targetRole),
+            text: targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member'),
             onPress: () =>
               updateMemberRole(
                 { memberId, mapId: id, newRole: targetRole },
@@ -178,7 +172,11 @@ export default function MapMembersScreen() {
                   </View>
                   <View className={`rounded-full px-2 py-0.5 ${roleBadgeBg}`}>
                     <Text className={`text-xs font-medium ${roleTextColor}`}>
-                      {getRoleLabel(member.role)}
+                      {member.role === 'owner'
+                        ? t('common.roles.owner')
+                        : member.role === 'contributor'
+                          ? t('common.roles.contributor')
+                          : t('common.roles.member')}
                     </Text>
                   </View>
                   {canTap && (

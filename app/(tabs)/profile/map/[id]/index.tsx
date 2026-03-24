@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useMaps } from '@/hooks/use-maps';
-import { useProfile } from '@/hooks/use-profile';
 import { useTags } from '@/hooks/use-tags';
 import { useMapMembers } from '@/hooks/use-map-members';
 import { useUpdateMap } from '@/hooks/use-update-map';
@@ -44,7 +43,6 @@ export default function MapSettingsScreen() {
   const { mutate: createTag, isPending: isCreatingTag } = useCreateTag();
   const { mutate: updateTag, isPending: isUpdatingTag } = useUpdateTag();
   const { mutate: deleteTag, isPending: isDeletingTag } = useDeleteTag();
-  const { data: profile } = useProfile();
   const tagEditorRef = useRef<BottomSheetModal>(null);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
 
