@@ -357,9 +357,11 @@ export default function SaveScreen() {
           ref={tagEditorRef}
           mapId={effectiveMapId}
           editingTag={null}
-          onCreateTag={({ mapId, name, emoji, color }) => {
-            createTag.mutate({ mapId, name, emoji, color }, {
+          onCreateTag={({ mapId: initiatingMapId, name, emoji, color }) => {
+            createTag.mutate({ mapId: initiatingMapId, name, emoji, color }, {
               onSuccess: (newTag) => {
+                // Guard: if the user switched maps while the tag was being created, discard the result
+                if (effectiveMapId !== initiatingMapId) return;
                 setSelectedTagIds((prev) => [...prev, newTag.id]);
                 tagEditorRef.current?.dismiss();
                 setTagEditorKey((k) => k + 1);
