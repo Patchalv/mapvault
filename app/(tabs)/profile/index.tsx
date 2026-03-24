@@ -18,10 +18,14 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,6 +50,9 @@ export default function ProfileScreen() {
   const { mutate: createMap, isPending: isCreating } = useCreateMap();
   const { handleMutationError } = useFreemiumGate();
   const shouldShowReviewPrompt = FEATURE_FLAGS.reviewPromptsEnabled;
+
+  const [showNewMapModal, setShowNewMapModal] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
 
   const [hasStoreAction, setHasStoreAction] = useState(false);
   useEffect(() => {
@@ -110,36 +117,28 @@ export default function ProfileScreen() {
       return;
     }
 
-    Alert.prompt(
-      t('profile.newMapPromptTitle'),
-      t('profile.newMapPromptMessage'),
-      [
-        { text: t('common.cancel'), style: "cancel" },
-        {
-          text: t('profile.create'),
-          onPress: (name?: string) => {
-            if (!name?.trim()) return;
-            createMap(
-              { name: name.trim() },
-              {
-                onSuccess: () => {
-                  router.navigate("/(tabs)/explore");
-                },
-                onError: (err) => {
-                  handleMutationError(err);
-                },
-              },
-            );
-          },
+    setNewMapName('');
+    setShowNewMapModal(true);
+  };
+
+  const handleCreateMap = () => {
+    if (isCreating || !newMapName.trim()) return;
+    setShowNewMapModal(false);
+    createMap(
+      { name: newMapName.trim() },
+      {
+        onSuccess: () => {
+          router.navigate("/(tabs)/explore");
         },
-      ],
-      "plain-text",
-      "",
-      "default",
+        onError: (err) => {
+          handleMutationError(err);
+        },
+      },
     );
   };
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1, backgroundColor: "#FFFFFF" }}
       contentContainerStyle={{
@@ -337,5 +336,48 @@ export default function ProfileScreen() {
         {t('profile.deleteAccount')}
       </Text>
     </ScrollView>
+      <Modal
+        visible={showNewMapModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNewMapModal(false)}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/50"
+          onPress={() => setShowNewMapModal(false)}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View className="w-72 rounded-2xl bg-white p-6" onStartShouldSetResponder={() => true}>
+              <Text className="mb-1 text-lg font-semibold text-gray-900">
+                {t('profile.newMapPromptTitle')}
+              </Text>
+              <Text className="mb-4 text-sm text-gray-500">
+                {t('profile.newMapPromptMessage')}
+              </Text>
+              <TextInput
+                autoFocus
+                value={newMapName}
+                onChangeText={setNewMapName}
+                onSubmitEditing={handleCreateMap}
+                returnKeyType="done"
+                placeholder={t('profile.newMapPlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                className="mb-4 rounded-lg border border-gray-200 px-3 py-2 text-base text-gray-900"
+              />
+              <View className="flex-row justify-end gap-3">
+                <Pressable onPress={() => setShowNewMapModal(false)}>
+                  <Text className="text-base text-gray-500">{t('common.cancel')}</Text>
+                </Pressable>
+                <Pressable onPress={handleCreateMap} disabled={isCreating}>
+                  <Text className="text-base font-semibold text-blue-500">
+                    {t('profile.create')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
