@@ -58,6 +58,7 @@
     "mapLimitMessage": "Free accounts are limited to 1 map. Upgrade to premium for unlimited maps.",
     "newMapPromptTitle": "New Map",
     "newMapPromptMessage": "Enter a name for your new map",
+    "newMapPlaceholder": "Map name",
     "create": "Create",
     "upgradeCTATitle": "Upgrade to MapVault Premium",
     "upgradeCTASubtitle": "Unlimited maps, places, and sharing with friends.",
