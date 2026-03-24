@@ -361,6 +361,7 @@ export default function ProfileScreen() {
                 onSubmitEditing={handleCreateMap}
                 returnKeyType="done"
                 placeholder={t('profile.newMapPlaceholder')}
+                placeholderTextColor="#9CA3AF"
                 className="mb-4 rounded-lg border border-gray-200 px-3 py-2 text-base text-gray-900"
               />
               <View className="flex-row justify-end gap-3">
