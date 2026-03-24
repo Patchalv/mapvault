@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -55,7 +55,8 @@ export default function MapMembersScreen() {
   const { isOwner } = useMapRole(id ?? null);
   const { data: members, isLoading, isError, refetch } = useMapMembers(id ?? null);
   const { mutate: updateMemberRole } = useUpdateMemberRole();
-  const { mutate: removeMember, isPending: isRemoving } = useRemoveMember();
+  const { mutate: removeMember } = useRemoveMember();
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const isPremiumOwner = isOwner && profile?.entitlement === 'premium';
 
@@ -97,13 +98,19 @@ export default function MapMembersScreen() {
                   {
                     text: t('mapMembers.removeConfirm'),
                     style: 'destructive',
-                    onPress: () =>
+                    onPress: () => {
+                      setRemovingMemberId(memberId);
                       removeMember(
                         { memberId, mapId: id, role: currentRole as 'contributor' | 'member' },
                         {
-                          onError: (err) => Alert.alert(t('common.error'), err.message),
+                          onSuccess: () => setRemovingMemberId(null),
+                          onError: (err) => {
+                            setRemovingMemberId(null);
+                            Alert.alert(t('common.error'), err.message);
+                          },
                         }
-                      ),
+                      );
+                    },
                   },
                 ]
               ),
@@ -162,7 +169,7 @@ export default function MapMembersScreen() {
                 .toUpperCase()
                 .slice(0, 2);
               const isCurrentUser = member.user_id === user?.id;
-              const canTap = isPremiumOwner && !isCurrentUser && member.role !== 'owner' && !isRemoving;
+              const canTap = isPremiumOwner && !isCurrentUser && member.role !== 'owner' && removingMemberId === null;
 
               const roleBadgeBg =
                 member.role === 'owner'

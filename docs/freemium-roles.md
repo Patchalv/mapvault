@@ -94,6 +94,7 @@ Each restriction is enforced at one or more layers:
 | Free user map limit (1) | -- | `create-map` checks entitlement + count | Freemium gate alert on 403 |
 | Free user cannot invite | `map_invites` INSERT restricted to owners | `create-invite` checks entitlement | Upgrade alert shown |
 | Free user cannot change roles | `map_members` UPDATE restricted to owners | -- | Role change UI hidden |
+| Free user cannot remove members | `map_members` DELETE policy requires `entitlement = 'premium'` | -- | Remove option hidden for non-premium owners |
 | Only owners can invite | `map_invites` INSERT restricted to owners | `create-invite` checks ownership | Invite UI only shown to owners |
 
 ## Key Files
@@ -105,6 +106,7 @@ Each restriction is enforced at one or more layers:
 | `hooks/use-map-role.ts` | Returns current user's role on a map (`role`, `isOwner`, `isContributor`, `isMember`, `canEdit`) |
 | `hooks/use-create-invite.ts` | Mutation: creates invite via `create-invite` Edge Function |
 | `hooks/use-update-member-role.ts` | Mutation: changes contributor <-> member via direct Supabase update |
+| `hooks/use-remove-member.ts` | Mutation: removes a non-owner member from a map (premium owners only) |
 | `hooks/use-freemium-gate.ts` | Catches `FREEMIUM_LIMIT_EXCEEDED` errors, shows upgrade alert |
 
 ### Edge Functions
