@@ -44,6 +44,7 @@ type AnalyticsEvents = {
   members_page_viewed: { map_id: string };
   invite_revoked: { map_id: string; invite_id: string };
   member_role_changed: { map_id: string; new_role: string };
+  member_removed: { map_id: string; role: string };
   paywall_viewed: {
     trigger: 'map_limit' | 'place_limit' | 'invite_limit' | 'profile_tap' | 'profile_cta';
   };

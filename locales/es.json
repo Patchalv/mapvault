@@ -243,8 +243,12 @@
     "pageDescription": "Personas que tienen acceso a este mapa.",
     "you": " (tú)",
     "noMembers": "Parece que no hay miembros en este mapa...",
-    "changeRoleTitle": "Cambiar Rol",
-    "changeRoleMessage": "¿Hacer {{name}} un {{role}}?"
+    "changeRoleTo": "Cambiar rol a {{role}}",
+    "manageMessage": "Cambia su rol o elimínalos de este mapa.",
+    "removeFromMap": "Eliminar del mapa",
+    "removeConfirmTitle": "¿Eliminar a {{name}}?",
+    "removeConfirmMessage": "Perderán acceso a este mapa. Sus lugares guardados permanecerán.",
+    "removeConfirm": "Eliminar"
   },
   "mapPickerSheet": {
     "title": "Guardar en mapa",

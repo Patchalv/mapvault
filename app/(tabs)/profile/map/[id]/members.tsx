@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -15,6 +15,7 @@ import { useProfile } from '@/hooks/use-profile';
 import { useMapRole } from '@/hooks/use-map-role';
 import { useMapMembers } from '@/hooks/use-map-members';
 import { useUpdateMemberRole } from '@/hooks/use-update-member-role';
+import { useRemoveMember } from '@/hooks/use-remove-member';
 import { Spinner } from '@/components/spinner/spinner';
 import { ErrorState } from '@/components/error-state/error-state';
 import { track } from '@/lib/analytics';
@@ -54,6 +55,8 @@ export default function MapMembersScreen() {
   const { isOwner } = useMapRole(id ?? null);
   const { data: members, isLoading, isError, refetch } = useMapMembers(id ?? null);
   const { mutate: updateMemberRole } = useUpdateMemberRole();
+  const { mutate: removeMember } = useRemoveMember();
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const isPremiumOwner = isOwner && profile?.entitlement === 'premium';
 
@@ -64,31 +67,59 @@ export default function MapMembersScreen() {
     }, [id, refetch])
   );
 
-  const handleChangeRole = useCallback(
+  const handleManageMember = useCallback(
     (memberId: string, memberName: string, currentRole: string) => {
       if (!id || !isPremiumOwner) return;
       const targetRole = currentRole === 'contributor' ? 'member' : 'contributor';
       const targetRoleLabel = targetRole === 'contributor' ? t('common.roles.contributor') : t('common.roles.member');
       Alert.alert(
-        t('mapMembers.changeRoleTitle'),
-        t('mapMembers.changeRoleMessage', { name: memberName, role: targetRoleLabel }),
+        memberName,
+        t('mapMembers.manageMessage'),
         [
-          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: targetRoleLabel,
+            text: t('mapMembers.changeRoleTo', { role: targetRoleLabel }),
             onPress: () =>
               updateMemberRole(
                 { memberId, mapId: id, newRole: targetRole },
                 {
-                  onSuccess: () => track('member_role_changed', { map_id: id, new_role: targetRole }),
                   onError: (err) => Alert.alert(t('common.error'), err.message),
                 }
               ),
           },
+          {
+            text: t('mapMembers.removeFromMap'),
+            style: 'destructive',
+            onPress: () =>
+              Alert.alert(
+                t('mapMembers.removeConfirmTitle', { name: memberName }),
+                t('mapMembers.removeConfirmMessage'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('mapMembers.removeConfirm'),
+                    style: 'destructive',
+                    onPress: () => {
+                      setRemovingMemberId(memberId);
+                      removeMember(
+                        { memberId, mapId: id, role: currentRole as 'contributor' | 'member' },
+                        {
+                          onSuccess: () => setRemovingMemberId(null),
+                          onError: (err) => {
+                            setRemovingMemberId(null);
+                            Alert.alert(t('common.error'), err.message);
+                          },
+                        }
+                      );
+                    },
+                  },
+                ]
+              ),
+          },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     },
-    [id, isPremiumOwner, updateMemberRole, t]
+    [id, isPremiumOwner, updateMemberRole, removeMember, t]
   );
 
   return (
@@ -138,7 +169,8 @@ export default function MapMembersScreen() {
                 .toUpperCase()
                 .slice(0, 2);
               const isCurrentUser = member.user_id === user?.id;
-              const canTap = isPremiumOwner && !isCurrentUser && member.role !== 'owner';
+              const isBeingRemoved = removingMemberId === member.id;
+              const canTap = isPremiumOwner && !isCurrentUser && member.role !== 'owner' && !isBeingRemoved;
 
               const roleBadgeBg =
                 member.role === 'owner'
@@ -156,7 +188,7 @@ export default function MapMembersScreen() {
               return (
                 <Pressable
                   key={member.id}
-                  onPress={canTap ? () => handleChangeRole(member.id, name, member.role) : undefined}
+                  onPress={canTap ? () => handleManageMember(member.id, name, member.role) : undefined}
                   className="mb-2 flex-row items-center rounded-xl border border-gray-100 p-3"
                 >
                   <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-gray-200">

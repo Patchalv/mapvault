@@ -107,14 +107,24 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 |---|---|---|---|
 | `tag_created` | Tag created (onSuccess) | `map_id`, `tag_name` | `hooks/use-manage-tags.ts` |
 
-### Sharing & Roles (4 events)
+### Sharing & Roles (8 events)
 
 | Event | When | Properties | File |
 |---|---|---|---|
+| `invites_screen_viewed` | Invites sub-page focused | `map_id` | `app/(tabs)/profile/map/[id]/invites.tsx` |
+| `members_page_viewed` | Members sub-page focused | `map_id` | `app/(tabs)/profile/map/[id]/members.tsx` |
 | `invite_link_created` | Invite created (onSuccess) | `map_id` | `hooks/use-create-invite.ts` |
 | `invite_link_shared` | Share sheet completed successfully | `map_id` | `components/invite-section/invite-section.tsx` |
 | `invite_accepted` | Invite accepted (onSuccess) | `map_id` | `app/invite/[token].tsx` |
+| `invite_revoked` | Invite revoked (onSuccess) | `map_id`, `invite_id` | `app/(tabs)/profile/map/[id]/invites.tsx` |
 | `member_role_changed` | Member role updated (onSuccess) | `map_id`, `new_role` | `hooks/use-update-member-role.ts` |
+| `member_removed` | Member removed from map (onSuccess) | `map_id`, `role` | `hooks/use-remove-member.ts` |
+
+### App Reviews (1 event)
+
+| Event | When | Properties | File |
+|---|---|---|---|
+| `review_prompted` | In-app review dialog triggered | `trigger`: `'place_visited' \| 'places_saved_milestone' \| 'directions_after_filter'` | `hooks/use-app-review.ts` |
 
 ### Payments (4 events)
 
@@ -125,7 +135,7 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 | `purchase_completed` | Purchase succeeds | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_failed` | Purchase fails or is cancelled | `reason`: `'cancelled' \| 'error'` | `app/(tabs)/profile/paywall.tsx` |
 
-**Total: 25 events**
+**Total: 30 events**
 
 ## Rules for Adding New Events
 

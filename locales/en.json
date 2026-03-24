@@ -243,8 +243,12 @@
     "pageDescription": "People who have access to this map.",
     "you": " (you)",
     "noMembers": "Looks like there are no members in this map...",
-    "changeRoleTitle": "Change Role",
-    "changeRoleMessage": "Make {{name}} a {{role}}?"
+    "changeRoleTo": "Change role to {{role}}",
+    "manageMessage": "Change their role or remove them from this map.",
+    "removeFromMap": "Remove from Map",
+    "removeConfirmTitle": "Remove {{name}}?",
+    "removeConfirmMessage": "They will lose access to this map. Their saved places will remain.",
+    "removeConfirm": "Remove"
   },
   "mapPickerSheet": {
     "title": "Save to Map",
