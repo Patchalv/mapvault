@@ -40,6 +40,8 @@ type AnalyticsEvents = {
   invite_link_created: { map_id: string };
   invite_link_shared: { map_id: string };
   invite_accepted: { map_id: string };
+  invites_screen_viewed: { map_id: string };
+  invite_revoked: { map_id: string; invite_id: string };
   member_role_changed: { map_id: string; new_role: string };
   paywall_viewed: {
     trigger: 'map_limit' | 'place_limit' | 'invite_limit' | 'profile_tap' | 'profile_cta';

@@ -24,15 +24,12 @@ import { useUpdateMap } from '@/hooks/use-update-map';
 import { useDeleteMap } from '@/hooks/use-delete-map';
 import { useLeaveMap } from '@/hooks/use-leave-map';
 import { useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-manage-tags';
-import { useInvites } from '@/hooks/use-invites';
-import { useCreateInvite } from '@/hooks/use-create-invite';
 import { useUpdateMemberRole } from '@/hooks/use-update-member-role';
-import { useFreemiumGate } from '@/hooks/use-freemium-gate';
 import { TagEditor } from '@/components/tag-editor/tag-editor';
-import { InviteSection } from '@/components/invite-section/invite-section';
-import { InviteCreator } from '@/components/invite-creator/invite-creator';
+import { LinkCard, LINK_CARD_ICON_SIZE, LINK_CARD_ICON_COLOR } from '@/components/link-card/link-card';
 import { LoadingState } from '@/components/loading-state/loading-state';
 import { ErrorState } from '@/components/error-state/error-state';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Tag } from '@/types';
 
 export default function MapSettingsScreen() {
@@ -50,13 +47,8 @@ export default function MapSettingsScreen() {
   const { mutate: updateTag, isPending: isUpdatingTag } = useUpdateTag();
   const { mutate: deleteTag, isPending: isDeletingTag } = useDeleteTag();
   const { data: profile } = useProfile();
-  const { data: invites, isLoading: isLoadingInvites } = useInvites(id ?? null);
-  const { mutate: createInvite, isPending: isCreatingInvite } = useCreateInvite();
   const { mutate: updateMemberRole } = useUpdateMemberRole();
-  const { handleMutationError } = useFreemiumGate();
-
   const tagEditorRef = useRef<BottomSheetModal>(null);
-  const inviteCreatorRef = useRef<BottomSheetModal>(null);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
 
   // Find current map and role
@@ -187,26 +179,6 @@ export default function MapSettingsScreen() {
       });
     },
     [deleteTag, t]
-  );
-
-  const handleOpenInviteCreator = useCallback(() => {
-    Keyboard.dismiss();
-    inviteCreatorRef.current?.present();
-  }, []);
-
-  const handleCreateInvite = useCallback(
-    (input: {
-      mapId: string;
-      role: 'contributor' | 'member';
-      expiresInDays: number | null;
-      maxUses: number | null;
-    }) => {
-      createInvite(input, {
-        onSuccess: () => inviteCreatorRef.current?.dismiss(),
-        onError: (err) => handleMutationError(err, 'invite_limit'),
-      });
-    },
-    [createInvite, handleMutationError]
   );
 
   const handleChangeRole = useCallback(
@@ -468,14 +440,17 @@ export default function MapSettingsScreen() {
               })}
             </View>
 
-            {/* Invites Section */}
-            <InviteSection
-              invites={invites}
-              isLoading={isLoadingInvites}
-              isOwner={isOwner}
-              isPremium={isPremium}
-              onCreateInvite={handleOpenInviteCreator}
-            />
+            {/* Invites */}
+            {isOwner && (
+              <View className="mb-4">
+                <LinkCard
+                  icon={<Ionicons name="mail-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
+                  title={t('mapInvites.title')}
+                  subtitle={t('mapInvites.description')}
+                  onPress={() => router.push(`/(tabs)/profile/map/${id}/invites`)}
+                />
+              </View>
+            )}
 
             {/* Danger Zone */}
             <View className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
@@ -521,15 +496,6 @@ export default function MapSettingsScreen() {
         />
       )}
 
-      {/* Invite Creator Bottom Sheet */}
-      {id && (
-        <InviteCreator
-          ref={inviteCreatorRef}
-          mapId={id}
-          onCreateInvite={handleCreateInvite}
-          isPending={isCreatingInvite}
-        />
-      )}
     </BottomSheetModalProvider>
   );
 }

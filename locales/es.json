@@ -223,6 +223,23 @@
     "noInvitesYet": "Sin invitaciones aún. Crea una para compartir este mapa.",
     "shareMessage": "¡Únete a mi mapa en MapVault! {{link}}"
   },
+  "mapInvites": {
+    "title": "Invitaciones",
+    "description": "Comparte un enlace de invitación para que otros se unan a tu mapa.",
+    "couldntLoad": "No se pudieron cargar las invitaciones.",
+    "createError": "No se pudo crear la invitación. Inténtalo de nuevo.",
+    "emptyTitle": "No hay enlaces de invitación activos.",
+    "emptySubtitle": "Toca \"+ Crear invitación\" para compartir este mapa.",
+    "revokeTitle": "¿Revocar invitación?",
+    "revokeMessage": "Este enlace dejará de funcionar de inmediato. Esta acción no se puede deshacer.",
+    "revokeConfirm": "Revocar",
+    "noExpiry": "Sin caducidad",
+    "expiresToday": "Caduca hoy",
+    "oneDayRemaining": "1 día restante",
+    "daysRemaining": "{{count}} días restantes",
+    "uses": "{{count}} usos",
+    "usesWithMax": "{{count}}/{{max}} usos"
+  },
   "mapPickerSheet": {
     "title": "Guardar en mapa",
     "subtitle": "Elige a qué mapa guardar este lugar"

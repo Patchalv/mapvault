@@ -22,6 +22,7 @@ export type Database = {
           id: string
           map_id: string
           max_uses: number | null
+          revoked_at: string | null
           role: string
           token: string
           use_count: number
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           map_id: string
           max_uses?: number | null
+          revoked_at?: string | null
           role?: string
           token: string
           use_count?: number
@@ -44,6 +46,7 @@ export type Database = {
           id?: string
           map_id?: string
           max_uses?: number | null
+          revoked_at?: string | null
           role?: string
           token?: string
           use_count?: number
@@ -356,6 +359,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: {
+        Args: { p_token: string; p_user_id: string }
+        Returns: Json
+      }
       is_map_member: { Args: { check_map_id: string }; Returns: boolean }
     }
     Enums: {

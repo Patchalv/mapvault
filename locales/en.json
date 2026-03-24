@@ -223,6 +223,23 @@
     "noInvitesYet": "No invites yet. Create one to share this map.",
     "shareMessage": "Join my map on MapVault! {{link}}"
   },
+  "mapInvites": {
+    "title": "Invites",
+    "description": "Share an invite link so others can join this map.",
+    "couldntLoad": "Couldn't load invites.",
+    "createError": "Could not create invite. Please try again.",
+    "emptyTitle": "No active invite links.",
+    "emptySubtitle": "Tap \"+ Create Invite\" to share this map.",
+    "revokeTitle": "Revoke Invite?",
+    "revokeMessage": "This link will stop working immediately. This cannot be undone.",
+    "revokeConfirm": "Revoke",
+    "noExpiry": "No expiry",
+    "expiresToday": "Expires today",
+    "oneDayRemaining": "1 day remaining",
+    "daysRemaining": "{{count}} days remaining",
+    "uses": "{{count}} uses",
+    "usesWithMax": "{{count}}/{{max}} uses"
+  },
   "mapPickerSheet": {
     "title": "Save to Map",
     "subtitle": "Choose which map to save this place to"
