@@ -335,7 +335,7 @@ export default function MapSettingsScreen() {
                   icon={<Ionicons name="people-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
                   title={t('mapMembers.title')}
                   subtitle={isMembersError ? undefined : t('mapMembers.description', { count: members?.length ?? 0 })}
-                  onPress={() => router.push(`/(tabs)/profile/map/${id}/members`)}
+                  onPress={() => router.push(`/(tabs)/settings/map/${id}/members`)}
                 />
               )}
             </View>
@@ -347,7 +347,7 @@ export default function MapSettingsScreen() {
                   icon={<Ionicons name="mail-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
                   title={t('mapInvites.title')}
                   subtitle={t('mapInvites.description')}
-                  onPress={() => router.push(`/(tabs)/profile/map/${id}/invites`)}
+                  onPress={() => router.push(`/(tabs)/settings/map/${id}/invites`)}
                 />
               </View>
             )}

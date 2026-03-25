@@ -110,7 +110,7 @@ export default function ProfileScreen() {
           {
             text: t('common.upgrade'),
             onPress: () =>
-              router.push("/(tabs)/profile/paywall?trigger=map_limit"),
+              router.push("/(tabs)/settings/paywall?trigger=map_limit"),
           },
         ],
       );
@@ -172,7 +172,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={
             isFree
-              ? () => router.push("/(tabs)/profile/paywall?trigger=profile_tap")
+              ? () => router.push("/(tabs)/settings/paywall?trigger=profile_tap")
               : undefined
           }
           className={`mt-2 rounded-full px-3 py-1 ${
@@ -218,7 +218,7 @@ export default function ProfileScreen() {
             <Pressable
               key={map.id}
               className="mb-2 flex-row items-center rounded-xl border border-gray-100 bg-white p-4"
-              onPress={() => router.push(`/(tabs)/profile/map/${map.id}`)}
+              onPress={() => router.push(`/(tabs)/settings/map/${map.id}`)}
             >
               {/* Active dot */}
               <View
@@ -272,7 +272,7 @@ export default function ProfileScreen() {
       {isFree && (
         <Pressable
           onPress={() =>
-            router.push("/(tabs)/profile/paywall?trigger=profile_cta")
+            router.push("/(tabs)/settings/paywall?trigger=profile_cta")
           }
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4"
         >
@@ -331,7 +331,7 @@ export default function ProfileScreen() {
       {/* Delete Account */}
       <Text
         className="mt-3 text-center text-xs text-gray-400"
-        onPress={() => router.push("/(tabs)/profile/delete-account")}
+        onPress={() => router.push("/(tabs)/settings/delete-account")}
       >
         {t('profile.deleteAccount')}
       </Text>

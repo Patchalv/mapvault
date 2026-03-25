@@ -89,7 +89,7 @@ export default function MapInvitesScreen() {
           { text: t('common.cancel'), style: 'cancel' },
           {
             text: t('common.upgrade'),
-            onPress: () => router.push('/(tabs)/profile/paywall?trigger=invite_limit'),
+            onPress: () => router.push('/(tabs)/settings/paywall?trigger=invite_limit'),
           },
         ]
       );

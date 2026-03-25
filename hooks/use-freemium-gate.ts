@@ -22,7 +22,7 @@ export function useFreemiumGate() {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'View Plans',
-            onPress: () => router.push(`/(tabs)/profile/paywall?trigger=${trigger}`),
+            onPress: () => router.push(`/(tabs)/settings/paywall?trigger=${trigger}`),
           },
         ],
       );

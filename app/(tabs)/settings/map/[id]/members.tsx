@@ -230,7 +230,7 @@ export default function MapMembersScreen() {
                 icon={<Ionicons name="mail-outline" size={LINK_CARD_ICON_SIZE} color={LINK_CARD_ICON_COLOR} />}
                 title={t('mapMembers.inviteLinkTitle')}
                 subtitle={t('mapMembers.inviteLinkSubtitle')}
-                onPress={() => router.push(`/(tabs)/profile/map/${id}/invites`)}
+                onPress={() => router.push(`/(tabs)/settings/map/${id}/invites`)}
               />
             </View>
           )}

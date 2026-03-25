@@ -25,7 +25,10 @@ export default function PaywallScreen() {
   const isPremium = profile?.entitlement === 'premium';
 
   useEffect(() => {
-    const validTriggers = ['map_limit', 'place_limit', 'invite_limit', 'profile_tap', 'profile_cta'] as const;
+    const validTriggers = [
+      'map_limit', 'place_limit', 'invite_limit',
+      'profile_tap', 'profile_cta', 'settings_upgrade_cta',
+    ] as const;
     type PaywallTrigger = (typeof validTriggers)[number];
     const paywallTrigger: PaywallTrigger = validTriggers.includes(trigger as PaywallTrigger)
       ? (trigger as PaywallTrigger)
