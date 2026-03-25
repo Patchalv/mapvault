@@ -299,7 +299,7 @@
     },
     "rows": {
       "manageMaps": "Manage Maps (Coming Soon)",
-      "myMap": "My Map",
+      "myMap": "Change Active Map",
       "myMapDescription": "Controls which map is shown on Explore.",
       "profile": "Profile",
       "membership": "Membership (Coming Soon)",
