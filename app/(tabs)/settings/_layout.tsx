@@ -6,6 +6,10 @@ export default function SettingsLayout() {
   return (
     <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
       <Stack.Screen
+        name="index"
+        options={{ title: t('settings.title') }}
+      />
+      <Stack.Screen
         name="profile"
         options={{ headerShown: true, title: t('settings.rows.profile') }}
       />
