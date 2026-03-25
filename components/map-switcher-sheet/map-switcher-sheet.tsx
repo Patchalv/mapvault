@@ -47,31 +47,19 @@ export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
       >
         <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottom + 20 }}>
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>
-              {t('settings.rows.myMap')}
+          <View className="mb-4">
+            <Text className="text-lg font-bold text-gray-900">
+              {t('settings.mapSwitcherSheet.title')}
             </Text>
           </View>
 
           {/* All Maps option */}
           <Pressable
             onPress={() => handleSelect(ALL_MAPS_ID)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              borderRadius: 12,
-              backgroundColor: currentActiveId === ALL_MAPS_ID ? '#F3F4F6' : 'transparent',
-            }}
+            className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl ${currentActiveId === ALL_MAPS_ID ? 'bg-gray-100' : ''}`}
           >
             <Text
-              style={{
-                fontSize: 16,
-                fontWeight: currentActiveId === ALL_MAPS_ID ? '600' : '400',
-                color: currentActiveId === ALL_MAPS_ID ? '#111827' : '#374151',
-              }}
+              className={`text-base ${currentActiveId === ALL_MAPS_ID ? 'font-semibold text-gray-900' : 'font-normal text-gray-700'}`}
             >
               {t('settings.rows.allMaps')}
             </Text>
@@ -87,22 +75,10 @@ export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
               <Pressable
                 key={map.id}
                 onPress={() => handleSelect(map.id)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor: isSelected ? '#F3F4F6' : 'transparent',
-                }}
+                className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl ${isSelected ? 'bg-gray-100' : ''}`}
               >
                 <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: isSelected ? '600' : '400',
-                    color: isSelected ? '#111827' : '#374151',
-                  }}
+                  className={`text-base ${isSelected ? 'font-semibold text-gray-900' : 'font-normal text-gray-700'}`}
                 >
                   {map.name}
                 </Text>

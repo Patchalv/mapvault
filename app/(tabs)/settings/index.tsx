@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -28,12 +28,16 @@ export default function SettingsScreen() {
   const isPremium = profile?.entitlement === 'premium';
   const isFree = profile?.entitlement === 'free';
   const showRateReview = FEATURE_FLAGS.reviewPromptsEnabled;
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function handleSignOut() {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
     await logOutUser();
     const { error } = await supabase.auth.signOut();
     if (error) {
       Alert.alert(t('common.error'), error.message);
+      setIsSigningOut(false);
     }
   }
 
@@ -147,7 +151,7 @@ export default function SettingsScreen() {
               </Text>
               {isPremium && (
                 <View className="mr-2 rounded-full bg-amber-100 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-amber-700">PREMIUM</Text>
+                  <Text className="text-xs font-bold text-amber-700">{t('settings.rows.premiumBadge')}</Text>
                 </View>
               )}
               <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
@@ -208,7 +212,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Footer: Sign Out */}
-        <Pressable onPress={handleSignOut} className="mb-10 mt-8 items-center py-2">
+        <Pressable onPress={handleSignOut} disabled={isSigningOut} className="mb-10 mt-8 items-center py-2">
           <Text className="text-base text-gray-400">{t('settings.rows.signOut')}</Text>
         </Pressable>
       </ScrollView>

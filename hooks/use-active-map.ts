@@ -56,7 +56,7 @@ export function useActiveMap() {
 
   return {
     activeMapId,
-    activeMapName: isAllMaps ? 'All Maps' : activeMap?.name ?? null,
+    activeMapName: isAllMaps ? null : activeMap?.name ?? null,
     activeMapRole,
     canEditActiveMap: isAllMaps ? null : canEditActiveMap,
     maps,

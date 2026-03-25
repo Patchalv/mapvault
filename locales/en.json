@@ -308,7 +308,11 @@
       "termsOfService": "Terms of Service",
       "help": "Help",
       "signOut": "Log out",
-      "allMaps": "All Maps"
+      "allMaps": "All Maps",
+      "premiumBadge": "PREMIUM"
+    },
+    "mapSwitcherSheet": {
+      "title": "Select which map should be active"
     }
   }
 }
