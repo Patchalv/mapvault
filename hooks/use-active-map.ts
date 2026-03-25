@@ -29,8 +29,8 @@ export function useActiveMap() {
   const activeMapRole = (activeMembership?.role ?? null) as MapRole | null;
   const canEditActiveMap = activeMapRole === 'owner' || activeMapRole === 'contributor';
 
-  const { mutate: setActiveMap, isPending: isSettingMap } = useMutation({
-    mutationFn: async (mapId: string) => {
+  const { mutate: _setActiveMap, isPending: isSettingMap } = useMutation({
+    mutationFn: async ({ mapId }: { mapId: string; source?: 'dropdown' | 'settings' }) => {
       if (!profile) throw new Error('No profile');
       // ALL_MAPS_ID → set active_map_id to null
       const newActiveMapId = mapId === ALL_MAPS_ID ? null : mapId;
@@ -40,14 +40,19 @@ export function useActiveMap() {
         .eq('id', profile.id);
       if (error) throw error;
     },
-    onSuccess: (_data, mapId) => {
+    onSuccess: (_data, { mapId, source = 'dropdown' }) => {
       track('map_switched', {
         map_id: mapId === ALL_MAPS_ID ? 'all' : mapId,
-        source: 'dropdown',
+        source,
       });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
+
+  // Backwards-compatible wrapper to support optional source parameter
+  const setActiveMap = (mapId: string, options?: { source?: 'dropdown' | 'settings' }) => {
+    _setActiveMap({ mapId, source: options?.source });
+  };
 
   return {
     activeMapId,
