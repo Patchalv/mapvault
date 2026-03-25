@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import type { BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { useTranslation } from 'react-i18next';
 import type { Tag, VisitedFilter } from '@/types';
 
@@ -14,6 +15,7 @@ interface FilterSheetProps {
   onSetSearchQuery: (query: string) => void;
   onClearAll: () => void;
   isAllMaps?: boolean;
+  onChange?: BottomSheetModalProps['onChange'];
 }
 
 export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
@@ -28,6 +30,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
       onSetSearchQuery,
       onClearAll,
       isAllMaps,
+      onChange,
     },
     ref
   ) {
@@ -48,6 +51,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
         ref={ref}
         snapPoints={['55%', '80%']}
         onDismiss={handleDismiss}
+        onChange={onChange}
         backgroundStyle={{ backgroundColor: '#FFFFFF', borderRadius: 24 }}
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
       >

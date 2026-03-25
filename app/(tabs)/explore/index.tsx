@@ -71,6 +71,7 @@ export default function ExploreScreen() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [visitedFilter, setVisitedFilter] = useState<VisitedFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   // Selected place
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
@@ -266,9 +267,17 @@ export default function ExploreScreen() {
     });
   }, []);
 
-  const handleOpenFilters = useCallback(() => {
-    filterSheetRef.current?.present();
+  const handleFilterSheetChange = useCallback((index: number) => {
+    setIsFilterSheetOpen(index >= 0);
   }, []);
+
+  const handleOpenFilters = useCallback(() => {
+    if (isFilterSheetOpen) {
+      filterSheetRef.current?.dismiss();
+    } else {
+      filterSheetRef.current?.present();
+    }
+  }, [isFilterSheetOpen]);
 
   const handleToggleTag = useCallback((tagId: string) => {
     setSelectedTagIds((prev) =>
@@ -475,6 +484,7 @@ export default function ExploreScreen() {
         onSetSearchQuery={setSearchQuery}
         onClearAll={handleClearFilters}
         isAllMaps={isAllMaps}
+        onChange={handleFilterSheetChange}
       />
 
       {/* Filter spotlight tooltip (onboarding step 2) */}
