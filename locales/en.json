@@ -51,6 +51,7 @@
   "profile": {
     "loadingProfile": "Loading your profile...",
     "couldntLoadProfile": "Couldn't load your profile. Check your connection and try again.",
+    "unknownUser": "User",
     "editDisplayNameTitle": "Edit Display Name",
     "displayNamePlaceholder": "Display name",
     "deleteAccount": "Delete account"

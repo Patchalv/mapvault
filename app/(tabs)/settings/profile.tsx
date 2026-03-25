@@ -67,7 +67,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const displayName = profile?.display_name ?? "User";
+  const displayName = profile?.display_name ?? t('profile.unknownUser');
   const email = user?.email ?? "";
   const initials = displayName
     .split(" ")
@@ -79,6 +79,11 @@ export default function ProfileScreen() {
   const handleEditName = () => {
     setEditNameValue(displayName);
     setShowEditNameModal(true);
+  };
+
+  const handleCloseEditNameModal = () => {
+    if (isSavingName) return;
+    setShowEditNameModal(false);
   };
 
   const handleSaveName = () => {
@@ -142,11 +147,11 @@ export default function ProfileScreen() {
         visible={showEditNameModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowEditNameModal(false)}
+        onRequestClose={handleCloseEditNameModal}
       >
         <Pressable
           className="flex-1 items-center justify-center bg-black/50"
-          onPress={() => setShowEditNameModal(false)}
+          onPress={handleCloseEditNameModal}
         >
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View className="w-72 rounded-2xl bg-white p-6" onStartShouldSetResponder={() => true}>
@@ -164,7 +169,7 @@ export default function ProfileScreen() {
                 className="mb-4 rounded-lg border border-gray-200 px-3 py-2 text-base text-gray-900"
               />
               <View className="flex-row justify-end gap-3">
-                <Pressable onPress={() => setShowEditNameModal(false)}>
+                <Pressable onPress={handleCloseEditNameModal}>
                   <Text className="text-base text-gray-500">{t('common.cancel')}</Text>
                 </Pressable>
                 <Pressable onPress={handleSaveName} disabled={isSavingName}>
