@@ -1,6 +1,7 @@
 import { forwardRef, useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop, type BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useActiveMap } from '@/hooks/use-active-map';
@@ -9,6 +10,7 @@ import { ALL_MAPS_ID } from '@/lib/constants';
 export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
   function MapSwitcherSheet(_props, ref) {
     const { t } = useTranslation();
+    const { bottom } = useSafeAreaInsets();
     const { maps, activeMapId, setActiveMap, isAllMaps } = useActiveMap();
 
     const handleSelect = useCallback(
@@ -22,16 +24,29 @@ export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
       [ref, setActiveMap],
     );
 
+    const renderBackdrop = useCallback(
+      (props: BottomSheetBackdropProps) => (
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+          pressBehavior="close"
+        />
+      ),
+      [],
+    );
+
     const currentActiveId = isAllMaps ? ALL_MAPS_ID : activeMapId;
 
     return (
       <BottomSheetModal
         ref={ref}
         snapPoints={['40%']}
+        backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: '#FFFFFF', borderRadius: 24 }}
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}
       >
-        <BottomSheetScrollView contentContainerStyle={{ padding: 20, paddingTop: 4 }}>
+        <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: bottom + 20 }}>
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>
               {t('settings.rows.myMap')}
