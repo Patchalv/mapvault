@@ -205,14 +205,14 @@ export default function PaywallScreen() {
                 className="text-xs text-gray-500 underline"
                 onPress={() => Linking.openURL(LEGAL_URLS.terms)}
               >
-                {t('profile.termsOfService')}
+                {t('settings.rows.termsOfService')}
               </Text>{' '}
               {t('paywall.legalAnd')}{' '}
               <Text
                 className="text-xs text-gray-500 underline"
                 onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
               >
-                {t('profile.privacyPolicy')}
+                {t('settings.rows.privacyPolicy')}
               </Text>
               .
             </Text>

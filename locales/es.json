@@ -51,24 +51,9 @@
   "profile": {
     "loadingProfile": "Cargando tu perfil...",
     "couldntLoadProfile": "No se pudo cargar tu perfil. Comprueba tu conexión e inténtalo de nuevo.",
-    "manageMaps": "Gestionar mapas",
-    "newMap": "Nuevo mapa",
-    "mapLimitTitle": "Límite de mapas alcanzado",
-    "mapLimitMessage": "Las cuentas gratuitas están limitadas a 1 mapa. Actualiza a premium para mapas ilimitados.",
-    "newMapPromptTitle": "Nuevo mapa",
-    "newMapPromptMessage": "Introduce un nombre para tu nuevo mapa",
-    "newMapPlaceholder": "Nombre del mapa",
-    "create": "Crear",
-    "upgradeCTATitle": "Actualiza a MapVault Premium",
-    "upgradeCTASubtitle": "Mapas ilimitados, lugares y compartir con amigos.",
-    "learnMore": "Saber más →",
-    "rateApp": "Valorar MapVault",
-    "signOut": "Cerrar sesión",
-    "privacyPolicy": "Política de privacidad",
-    "termsOfService": "Términos de servicio",
-    "deleteAccount": "Eliminar cuenta",
-    "freeTier": "gratis - actualizar",
-    "premiumTier": "premium"
+    "editDisplayNameTitle": "Editar nombre",
+    "displayNamePlaceholder": "Nombre de pantalla",
+    "deleteAccount": "Eliminar cuenta"
   },
   "mapSettings": {
     "title": "Configuración del mapa",

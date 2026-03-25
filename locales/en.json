@@ -51,24 +51,9 @@
   "profile": {
     "loadingProfile": "Loading your profile...",
     "couldntLoadProfile": "Couldn't load your profile. Check your connection and try again.",
-    "manageMaps": "Manage Maps",
-    "newMap": "New Map",
-    "mapLimitTitle": "Map Limit Reached",
-    "mapLimitMessage": "Free accounts are limited to 1 map. Upgrade to premium for unlimited maps.",
-    "newMapPromptTitle": "New Map",
-    "newMapPromptMessage": "Enter a name for your new map",
-    "newMapPlaceholder": "Map name",
-    "create": "Create",
-    "upgradeCTATitle": "Upgrade to MapVault Premium",
-    "upgradeCTASubtitle": "Unlimited maps, places, and sharing with friends.",
-    "learnMore": "Learn more →",
-    "rateApp": "Rate MapVault",
-    "signOut": "Sign Out",
-    "privacyPolicy": "Privacy Policy",
-    "termsOfService": "Terms of Service",
-    "deleteAccount": "Delete account",
-    "freeTier": "free - upgrade",
-    "premiumTier": "premium"
+    "editDisplayNameTitle": "Edit Display Name",
+    "displayNamePlaceholder": "Display name",
+    "deleteAccount": "Delete account"
   },
   "mapSettings": {
     "title": "Map Settings",
