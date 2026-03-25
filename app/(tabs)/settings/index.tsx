@@ -11,6 +11,7 @@ import { logOutUser } from '@/lib/revenuecat';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
 import { LEGAL_URLS } from '@/lib/constants';
+import { FEATURE_FLAGS } from '@/lib/feature-flags';
 import { MapSwitcherSheet } from '@/components/map-switcher-sheet/map-switcher-sheet';
 
 export default function SettingsScreen() {
@@ -26,6 +27,7 @@ export default function SettingsScreen() {
 
   const isPremium = profile?.entitlement === 'premium';
   const isFree = profile?.entitlement === 'free';
+  const showRateReview = FEATURE_FLAGS.reviewPromptsEnabled;
 
   async function handleSignOut() {
     await logOutUser();
@@ -159,16 +161,20 @@ export default function SettingsScreen() {
             {t('settings.sections.more')}
           </Text>
           <View className="overflow-hidden rounded-2xl bg-white">
-            <Pressable
-              onPress={handleRateReview}
-              className="flex-row items-center px-4 py-3.5"
-            >
-              <Ionicons name="star-outline" size={20} color="#374151" />
-              <Text className="ml-3 flex-1 text-base text-gray-800">
-                {t('settings.rows.rateReview')}
-              </Text>
-            </Pressable>
-            <View className="mx-4 h-px bg-gray-100" />
+            {showRateReview && (
+              <>
+                <Pressable
+                  onPress={handleRateReview}
+                  className="flex-row items-center px-4 py-3.5"
+                >
+                  <Ionicons name="star-outline" size={20} color="#374151" />
+                  <Text className="ml-3 flex-1 text-base text-gray-800">
+                    {t('settings.rows.rateReview')}
+                  </Text>
+                </Pressable>
+                <View className="mx-4 h-px bg-gray-100" />
+              </>
+            )}
             <Pressable
               onPress={() => handleExternalLink('privacy')}
               className="flex-row items-center px-4 py-3.5"
