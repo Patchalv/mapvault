@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         <View className="items-center pb-8">
           {/* Avatar */}
           {profile?.avatar_url ? (
-            <View className="mb-4 h-24 w-24 overflow-hidden rounded-full">
+            <View className="mb-4 h-36 w-36 overflow-hidden rounded-full">
               <Image
                 source={{ uri: profile.avatar_url }}
                 className="h-full w-full"
@@ -110,14 +110,14 @@ export default function ProfileScreen() {
               />
             </View>
           ) : (
-            <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-blue-500">
-              <Text className="text-3xl font-bold text-white">{initials}</Text>
+            <View className="mb-4 h-36 w-36 items-center justify-center rounded-full bg-blue-500">
+              <Text className="text-4xl font-bold text-white">{initials}</Text>
             </View>
           )}
 
           {/* Display Name with edit button */}
           <View className="flex-row items-center gap-2">
-            <Text className="text-xl font-bold text-gray-900">{displayName}</Text>
+            <Text className="text-3xl font-bold text-gray-900">{displayName}</Text>
             <Pressable onPress={handleEditName} hitSlop={8}>
               <FontAwesome name="pencil" size={14} color="#9CA3AF" />
             </Pressable>
