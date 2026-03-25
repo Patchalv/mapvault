@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, Platform, Linking } from 'react-native';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -17,6 +18,7 @@ export default function SettingsScreen() {
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { activeMapName, isAllMaps } = useActiveMap();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     track('settings_viewed', {});
@@ -60,8 +62,14 @@ export default function SettingsScreen() {
   const activeMapDisplay = isAllMaps ? t('settings.rows.allMaps') : activeMapName;
 
   return (
-    <>
-      <ScrollView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <View className="px-4 pb-3 pt-2">
+        <Text className="text-2xl font-bold">{t('settings.title')}</Text>
+      </View>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+      >
         {/* Section 0: Premium CTA (free users only, hidden while loading) */}
         {!isLoadingProfile && isFree && (
           <Pressable
@@ -200,6 +208,6 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <MapSwitcherSheet ref={bottomSheetRef} />
-    </>
+    </SafeAreaView>
   );
 }
