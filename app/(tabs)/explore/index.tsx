@@ -464,6 +464,7 @@ export default function ExploreScreen() {
         ref={detailSheetRef}
         place={selectedPlace}
         availableTags={selectedPlaceTags ?? []}
+        mapId={(isAllMaps ? selectedPlaceMapId : activeMapId) ?? ''}
         canEdit={selectedPlaceCanEdit}
         onToggleVisited={handleToggleVisited}
         onToggleTag={handleTogglePlaceTag}
