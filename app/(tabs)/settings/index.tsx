@@ -19,7 +19,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
-  const { activeMapName, isAllMaps } = useActiveMap();
+  const { activeMapName } = useActiveMap();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const insets = useSafeAreaInsets();
 
@@ -69,7 +69,7 @@ export default function SettingsScreen() {
     Linking.openURL(LEGAL_URLS[link]);
   }
 
-  const activeMapDisplay = isAllMaps ? t('settings.rows.allMaps') : activeMapName;
+  const activeMapDisplay = activeMapName;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
