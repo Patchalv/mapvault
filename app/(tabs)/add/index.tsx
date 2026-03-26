@@ -20,8 +20,8 @@ import type { PlacePrediction } from '@/lib/google-places';
 export default function AddScreen() {
   const { t } = useTranslation();
   const { predictions, isSearching, error, search, clear } = usePlaceSearch();
-  const { activeMapName, activeMapRole, isAllMaps } = useActiveMap();
-  const isMemberOnly = !isAllMaps && activeMapRole === 'member';
+  const { activeMapName, activeMapRole } = useActiveMap();
+  const isMemberOnly = activeMapRole === 'member';
   const [query, setQuery] = useState('');
 
   useFocusEffect(
@@ -64,13 +64,11 @@ export default function AddScreen() {
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
           <View className="px-4 pb-3 pt-2">
             <Text className="text-2xl font-bold">{t('addPlace.title')}</Text>
-            {activeMapName && (
+            {activeMapName ? (
               <Text className="mt-1 text-sm text-gray-500">
-                {isAllMaps
-                  ? t('addPlace.chooseMapWhenSaving')
-                  : t('addPlace.savingTo', { mapName: activeMapName })}
+                {t('addPlace.savingTo', { mapName: activeMapName })}
               </Text>
-            )}
+            ) : null}
           </View>
 
           {isMemberOnly && (

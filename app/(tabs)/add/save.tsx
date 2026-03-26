@@ -15,7 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useActiveMap } from '@/hooks/use-active-map';
 import { useTags } from '@/hooks/use-tags';
 import { useAddPlace } from '@/hooks/use-add-place';
@@ -26,7 +25,7 @@ import { useAppReview } from '@/hooks/use-app-review';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import { getPlaceDetails } from '@/lib/google-places';
-import { MapPickerSheet } from '@/components/map-picker-sheet/map-picker-sheet';
+
 
 export default function SaveScreen() {
   const { t } = useTranslation();
@@ -36,14 +35,10 @@ export default function SaveScreen() {
     address: string;
   }>();
 
-  const { activeMapId, activeMapName, isAllMaps, maps } = useActiveMap();
-  const [overrideMapId, setOverrideMapId] = useState<string | null>(null);
-  const mapPickerRef = useRef<BottomSheetModal>(null);
+  const { activeMapId, activeMapName } = useActiveMap();
 
-  const effectiveMapId = isAllMaps ? overrideMapId : activeMapId;
-  const effectiveMapName = isAllMaps
-    ? (maps.find((m) => m.id === overrideMapId)?.name ?? null)
-    : activeMapName;
+  const effectiveMapId = activeMapId;
+  const effectiveMapName = activeMapName;
 
   const { data: tags } = useTags(effectiveMapId);
   const addPlace = useAddPlace();
@@ -301,24 +296,7 @@ export default function SaveScreen() {
               </Pressable>
 
               {/* Map label */}
-              {isAllMaps ? (
-                <Pressable
-                  className="mt-6 flex-row items-center justify-center"
-                  onPress={() => mapPickerRef.current?.present()}
-                >
-                  <Text className="text-center text-sm text-blue-500">
-                    {effectiveMapName
-                      ? t('savePlace.savingTo', { mapName: effectiveMapName })
-                      : t('savePlace.tapToSelectMap')}
-                  </Text>
-                  <FontAwesome
-                    name="chevron-down"
-                    size={10}
-                    color="#3B82F6"
-                    style={{ marginLeft: 6 }}
-                  />
-                </Pressable>
-              ) : activeMapName ? (
+              {activeMapName ? (
                 <Text className="mt-6 text-center text-sm text-gray-400">
                   {t('savePlace.savingTo', { mapName: activeMapName })}
                 </Text>
@@ -350,12 +328,6 @@ export default function SaveScreen() {
           </SafeAreaView>
         </View>
       </TouchableWithoutFeedback>
-      <MapPickerSheet
-        ref={mapPickerRef}
-        maps={maps}
-        selectedMapId={overrideMapId}
-        onSelectMap={setOverrideMapId}
-      />
       {effectiveMapId && (
         <TagEditor
           key={tagEditorKey}
