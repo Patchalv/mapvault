@@ -46,7 +46,6 @@
     "notePlaceholder": "Añadir una nota...",
     "alreadyVisited": "¿Ya lo visitaste?",
     "savingTo": "Guardando en {{mapName}}",
-    "tapToSelectMap": "Toca para seleccionar un mapa",
     "failedToLoadDetails": "No se pudieron cargar los detalles del lugar.",
     "saveButton": "Guardar lugar"
   },
@@ -265,10 +264,6 @@
     "removeConfirm": "Eliminar",
     "inviteLinkTitle": "Invitar a alguien nuevo",
     "inviteLinkSubtitle": "Envía un enlace de invitación para añadir más personas"
-  },
-  "mapPickerSheet": {
-    "title": "Guardar en mapa",
-    "subtitle": "Elige a qué mapa guardar este lugar"
   },
   "placeDetailSheet": {
     "editTags": "Editar etiquetas",

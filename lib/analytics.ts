@@ -16,7 +16,7 @@ type AnalyticsEvents = {
     google_category: string | null;
   };
   place_save_abandoned: Record<string, never>;
-  explore_viewed: { view_mode: 'map' | 'list'; active_map: 'single' | 'all' };
+  explore_viewed: { view_mode: 'map' | 'list'; active_map: 'single' };
   filter_applied: {
     filter_type: 'tag' | 'visited' | 'search';
     active_tags: string[];
@@ -34,7 +34,7 @@ type AnalyticsEvents = {
   visited_toggled: { map_place_id: string; new_status: boolean };
   view_mode_switched: { new_mode: 'map' | 'list' };
   map_created: { map_id: string };
-  map_switched: { map_id: string | 'all'; source: 'dropdown' | 'settings' | 'auto' };
+  map_switched: { map_id: string; source: 'dropdown' | 'settings' | 'auto' };
   map_deleted: { map_id: string };
   tag_created: { map_id: string; tag_name: string };
   invite_link_created: { map_id: string };

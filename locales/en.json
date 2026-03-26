@@ -46,7 +46,6 @@
     "notePlaceholder": "Add a note...",
     "alreadyVisited": "Already visited?",
     "savingTo": "Saving to {{mapName}}",
-    "tapToSelectMap": "Tap to select a map",
     "failedToLoadDetails": "Failed to load place details.",
     "saveButton": "Save Place"
   },
@@ -265,10 +264,6 @@
     "removeConfirm": "Remove",
     "inviteLinkTitle": "Invite someone new",
     "inviteLinkSubtitle": "Send an invite link to add more people"
-  },
-  "mapPickerSheet": {
-    "title": "Save to Map",
-    "subtitle": "Choose which map to save this place to"
   },
   "placeDetailSheet": {
     "editTags": "Edit Tags",
