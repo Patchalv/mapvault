@@ -58,6 +58,10 @@ type AnalyticsEvents = {
   settings_map_switcher_opened: Record<string, never>;
   settings_rate_review_tapped: Record<string, never>;
   settings_external_link_tapped: { link: 'privacy' | 'terms' | 'help' };
+  membership_screen_viewed: { plan: 'free' | 'premium' };
+  membership_upgrade_tapped: { plan: 'free' | 'premium' };
+  membership_restore_tapped: { plan: 'free' | 'premium' };
+  membership_manage_subscription_tapped: { plan: 'free' | 'premium' };
 };
 
 let posthogInstance: PostHog | null = null;
