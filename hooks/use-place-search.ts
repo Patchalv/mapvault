@@ -1,15 +1,18 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from '@/hooks/use-location';
 import { searchPlaces, type PlacePrediction } from '@/lib/google-places';
 import { track } from '@/lib/analytics';
 import { PLACES_SEARCH } from '@/lib/constants';
 
 export function usePlaceSearch() {
+  const { t } = useTranslation();
   const { location } = useLocation();
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const search = useCallback(
     (input: string) => {
@@ -17,35 +20,43 @@ export function usePlaceSearch() {
         clearTimeout(timerRef.current);
       }
 
-      if (!input.trim()) {
+      setError(null);
+
+      if (input.trim().length < PLACES_SEARCH.minQueryLength) {
         setPredictions([]);
         setIsSearching(false);
         return;
       }
 
-      setIsSearching(true);
+      abortControllerRef.current?.abort();
 
       timerRef.current = setTimeout(async () => {
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setIsSearching(true);
+
         try {
-          setError(null);
-          const results = await searchPlaces(input, location);
+          const results = await searchPlaces(input, location, controller.signal);
           setPredictions(results);
           track('place_search_query', { query_length: input.length });
-        } catch {
+          setIsSearching(false);
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') return;
           setPredictions([]);
-          setError('Search failed. Check your connection and try again.');
-        } finally {
+          setError(t('addPlace.searchError'));
           setIsSearching(false);
         }
       }, PLACES_SEARCH.debounceMs);
     },
-    [location]
+    [location, t]
   );
 
   const clear = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
+    abortControllerRef.current?.abort();
     setPredictions([]);
     setIsSearching(false);
     setError(null);

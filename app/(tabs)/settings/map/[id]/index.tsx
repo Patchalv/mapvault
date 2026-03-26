@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -34,9 +35,11 @@ export default function MapSettingsScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: mapMembers, isLoading: isLoadingMaps, isError: isErrorMaps, refetch: refetchMaps } = useMaps();
   const { data: tags, isLoading: isLoadingTags } = useTags(id ?? null);
   const { data: members, isLoading: isLoadingMembers, isError: isMembersError } = useMapMembers(id ?? null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { mutate: updateMap, isPending: isUpdating } = useUpdateMap();
   const { mutate: deleteMap, isPending: isDeleting } = useDeleteMap();
   const { mutate: leaveMap, isPending: isLeaving } = useLeaveMap();
@@ -120,6 +123,20 @@ export default function MapSettingsScreen() {
       ]
     );
   };
+
+  const handleSync = useCallback(async () => {
+    if (!id || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['maps'] }),
+        queryClient.refetchQueries({ queryKey: ['tags', id] }),
+        queryClient.refetchQueries({ queryKey: ['map-members', id] }),
+      ]);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [id, isSyncing, queryClient]);
 
   const handleAddTag = useCallback(() => {
     Keyboard.dismiss();
@@ -208,9 +225,21 @@ export default function MapSettingsScreen() {
             >
               <FontAwesome name="chevron-left" size={16} color="#374151" />
             </Pressable>
-            <Text className="text-lg font-semibold text-gray-900">
+            <Text className="flex-1 text-lg font-semibold text-gray-900">
               {t('mapSettings.title')}
             </Text>
+            <Pressable
+              onPress={handleSync}
+              disabled={isSyncing}
+              accessibilityLabel={t('mapSettings.sync')}
+              className="h-10 w-10 items-center justify-center rounded-full"
+            >
+              {isSyncing ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : (
+                <FontAwesome name="refresh" size={16} color="#6B7280" />
+              )}
+            </Pressable>
           </View>
 
           <ScrollView

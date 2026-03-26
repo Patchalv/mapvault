@@ -15,7 +15,8 @@ export const ENTITLEMENTS = {
 } as const;
 
 export const PLACES_SEARCH = {
-  debounceMs: 300,
+  debounceMs: 400,
+  minQueryLength: 3,
   locationBiasRadius: 10_000,
 } as const;
 

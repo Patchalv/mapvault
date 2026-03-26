@@ -52,7 +52,8 @@ interface PlaceDetailsResponse {
 
 export async function searchPlaces(
   input: string,
-  location: { latitude: number; longitude: number } | null
+  location: { latitude: number; longitude: number } | null,
+  signal?: AbortSignal
 ): Promise<PlacePrediction[]> {
   if (!input.trim()) return [];
 
@@ -80,6 +81,7 @@ export async function searchPlaces(
         ...getPlatformHeaders(),
       },
       body: JSON.stringify(body),
+      signal,
     }
   );
 

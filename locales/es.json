@@ -36,7 +36,8 @@
     "viewerCannotEdit": "Eres un espectador de este mapa. Cambia a un mapa que puedas editar para añadir lugares.",
     "searchPlaceholder": "Buscar un lugar...",
     "searchHint": "Busca un restaurante, café, bar o cualquier lugar para añadir a tu mapa.",
-    "noResults": "No se encontraron resultados. Intenta con una búsqueda diferente."
+    "noResults": "No se encontraron resultados. Intenta con una búsqueda diferente.",
+    "searchError": "La búsqueda falló. Comprueba tu conexión e inténtalo de nuevo."
   },
   "savePlace": {
     "title": "Guardar lugar",
@@ -86,7 +87,8 @@
     "deleteMapButton": "Eliminar mapa",
     "leaveMapButton": "Abandonar mapa",
     "couldntLoadMap": "No se pudieron cargar los detalles del mapa.",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "sync": "Sincronizar"
   },
   "paywall": {
     "title": "Premium",

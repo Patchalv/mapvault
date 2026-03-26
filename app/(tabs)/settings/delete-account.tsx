@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/use-profile';
 import { useDeleteAccount } from '@/hooks/use-delete-account';
 import { logOutUser } from '@/lib/revenuecat';
@@ -18,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function DeleteAccountScreen() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: profile } = useProfile();
   const { mutate: deleteAccount, isPending } = useDeleteAccount();
 
@@ -44,6 +46,7 @@ export default function DeleteAccountScreen() {
             deleteAccount(undefined, {
               onSuccess: async () => {
                 await logOutUser();
+                queryClient.clear();
                 const { error } = await supabase.auth.signOut();
                 if (error) {
                   await supabase.auth.signOut({ scope: 'local' });
