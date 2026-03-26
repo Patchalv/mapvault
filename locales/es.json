@@ -57,7 +57,15 @@
     "avatarLabel": "Avatar de {{name}}",
     "editDisplayNameTitle": "Editar nombre",
     "displayNamePlaceholder": "Nombre de pantalla",
-    "deleteAccount": "Eliminar cuenta"
+    "deleteAccount": "Eliminar cuenta",
+    "manageMaps": "Mapas",
+    "newMap": "Nuevo mapa",
+    "mapLimitTitle": "Límite de mapas alcanzado",
+    "mapLimitMessage": "Las cuentas gratuitas están limitadas a 1 mapa. Actualiza a premium para mapas ilimitados.",
+    "newMapPromptTitle": "Nuevo mapa",
+    "newMapPromptMessage": "Dale un nombre a tu nuevo mapa.",
+    "newMapPlaceholder": "Nombre del mapa",
+    "create": "Crear"
   },
   "mapSettings": {
     "title": "Configuración del mapa",
