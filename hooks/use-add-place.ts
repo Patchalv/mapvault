@@ -51,6 +51,7 @@ export function useAddPlace() {
       queryClient.invalidateQueries({
         queryKey: ['map-places', variables.mapId],
       });
+      queryClient.invalidateQueries({ queryKey: ['place-count'] });
     },
   });
 }

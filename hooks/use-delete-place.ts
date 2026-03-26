@@ -63,6 +63,7 @@ export function useDeletePlace(activeMapId: string | null) {
           queryKey: ['map-places', ALL_MAPS_ID],
         });
       }
+      queryClient.invalidateQueries({ queryKey: ['place-count'] });
     },
   });
 }
