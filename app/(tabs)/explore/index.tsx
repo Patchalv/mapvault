@@ -9,7 +9,6 @@ import Mapbox from '@/lib/mapbox';
 import { useLocation } from '@/hooks/use-location';
 import { useActiveMap } from '@/hooks/use-active-map';
 import { useMapPlaces } from '@/hooks/use-map-places';
-import { useAllMapPlaces } from '@/hooks/use-all-map-places';
 import { useTags } from '@/hooks/use-tags';
 import { useFilteredPlaces } from '@/hooks/use-filtered-places';
 import { useToggleVisited } from '@/hooks/use-toggle-visited';
@@ -38,23 +37,18 @@ export default function ExploreScreen() {
   const cameraRef = useRef<Mapbox.Camera>(null);
   const lastFocusedRef = useRef<string | null>(null);
   const { location } = useLocation();
-  const { activeMapId, activeMapName, canEditActiveMap, mapMembers, maps, setActiveMap, isAllMaps } =
+  const { activeMapId, activeMapName, canEditActiveMap, maps, setActiveMap } =
     useActiveMap();
 
-  // Use different queries based on All Maps mode
-  const singleMapQuery = useMapPlaces(isAllMaps ? null : activeMapId);
-  const allMapsQuery = useAllMapPlaces(isAllMaps);
-  const activePlacesQuery = isAllMaps ? allMapsQuery : singleMapQuery;
-
   const {
-    data: places,
+    data: places = [],
     isLoading: isLoadingPlaces,
     isError: isErrorPlaces,
     isRefetching,
     refetch,
-  } = activePlacesQuery;
+  } = useMapPlaces(activeMapId);
 
-  const { data: tags } = useTags(isAllMaps ? null : activeMapId);
+  const { data: tags = [] } = useTags(activeMapId);
   const { mutate: toggleVisited } = useToggleVisited(activeMapId);
   const { mutate: updatePlaceTag } = useUpdatePlaceTags(activeMapId);
   const { mutate: deletePlace } = useDeletePlace(activeMapId);
@@ -81,7 +75,7 @@ export default function ExploreScreen() {
   // Derived
   const filteredPlaces = useFilteredPlaces({
     places,
-    selectedTagIds: isAllMaps ? [] : selectedTagIds,
+    selectedTagIds,
     visitedFilter,
     searchQuery,
   });
@@ -89,19 +83,10 @@ export default function ExploreScreen() {
   const selectedPlace = filteredPlaces.find((p) => p.id === selectedPlaceId) ?? null;
 
   // Determine edit permission for the selected place
-  const selectedPlaceCanEdit = (() => {
-    if (!selectedPlace) return true;
-    if (!isAllMaps) return canEditActiveMap ?? false;
-    // All Maps mode: look up role for the place's map
-    const membership = mapMembers.find((m) => m.map_id === selectedPlace.map_id);
-    return membership?.role === 'owner' || membership?.role === 'contributor';
-  })();
+  const selectedPlaceCanEdit = !selectedPlace ? true : (canEditActiveMap ?? false);
 
-  // Fetch tags for the selected place's map (handles All Maps mode)
-  const selectedPlaceMapId = selectedPlace?.map_id ?? null;
-  const { data: selectedPlaceTags } = useTags(
-    isAllMaps ? selectedPlaceMapId : activeMapId
-  );
+  // Fetch tags for the selected place's map
+  const { data: selectedPlaceTags } = useTags(activeMapId);
 
   const center: [number, number] = location
     ? [location.longitude, location.latitude]
@@ -152,10 +137,10 @@ export default function ExploreScreen() {
         lastExploreViewedRef.current = now;
         track('explore_viewed', {
           view_mode: viewMode,
-          active_map: isAllMaps ? 'all' : 'single',
+          active_map: 'single',
         });
       }
-    }, [viewMode, isAllMaps])
+    }, [viewMode])
   );
 
   // Analytics: filter_applied
@@ -194,7 +179,7 @@ export default function ExploreScreen() {
   }, [selectedTagIds, visitedFilter, searchQuery, tags, filteredPlaces.length]);
 
   const activeFilterCount =
-    (isAllMaps ? 0 : selectedTagIds.length) +
+    selectedTagIds.length +
     (visitedFilter !== 'all' ? 1 : 0) +
     (searchQuery ? 1 : 0);
 
@@ -427,7 +412,7 @@ export default function ExploreScreen() {
         ref={detailSheetRef}
         place={selectedPlace}
         availableTags={selectedPlaceTags ?? []}
-        mapId={(isAllMaps ? selectedPlaceMapId : activeMapId) ?? ''}
+        mapId={activeMapId ?? ''}
         canEdit={selectedPlaceCanEdit}
         onToggleVisited={handleToggleVisited}
         onToggleTag={handleTogglePlaceTag}
@@ -447,7 +432,6 @@ export default function ExploreScreen() {
         searchQuery={searchQuery}
         onSetSearchQuery={setSearchQuery}
         onClearAll={handleClearFilters}
-        isAllMaps={isAllMaps}
         onChange={handleFilterSheetChange}
       />
     </View>

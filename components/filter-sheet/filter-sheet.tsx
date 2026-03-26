@@ -15,7 +15,6 @@ interface FilterSheetProps {
   searchQuery: string;
   onSetSearchQuery: (query: string) => void;
   onClearAll: () => void;
-  isAllMaps?: boolean;
   onChange?: BottomSheetModalProps['onChange'];
 }
 
@@ -30,7 +29,6 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
       searchQuery,
       onSetSearchQuery,
       onClearAll,
-      isAllMaps,
       onChange,
     },
     ref
@@ -96,25 +94,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
           />
 
           {/* Tags */}
-          {isAllMaps ? (
-            <View style={{ marginBottom: 20 }}>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  marginBottom: 10,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5,
-                }}
-              >
-                {t('filterSheet.tagsLabel')}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#9CA3AF' }}>
-                {t('filterSheet.tagsAllMapsHint')}
-              </Text>
-            </View>
-          ) : tags.length > 0 && (
+          {tags.length > 0 && (
             <View style={{ marginBottom: 20 }}>
               <Text
                 style={{
