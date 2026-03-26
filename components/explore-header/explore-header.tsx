@@ -3,7 +3,6 @@ import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
-import { ALL_MAPS_ID } from '@/lib/constants';
 import type { ViewMode } from '@/types';
 
 interface MapOption {
@@ -63,30 +62,6 @@ export function ExploreHeader({
           {/* Dropdown */}
           {dropdownOpen && maps.length > 0 && (
             <View className="absolute left-0 top-full mt-1 min-w-[200px] rounded-xl bg-white p-2 shadow-lg">
-              {/* All Maps option */}
-              <Pressable
-                className={`rounded-lg px-3 py-2.5 ${
-                  activeMapId === ALL_MAPS_ID ? 'bg-gray-100' : ''
-                }`}
-                onPress={() => {
-                  onSelectMap(ALL_MAPS_ID);
-                  setDropdownOpen(false);
-                }}
-              >
-                <Text
-                  className={`text-sm ${
-                    activeMapId === ALL_MAPS_ID
-                      ? 'font-semibold text-gray-900'
-                      : 'text-gray-700'
-                  }`}
-                >
-                  {t('exploreHeader.allMaps')}
-                </Text>
-              </Pressable>
-
-              {/* Divider */}
-              <View className="mx-2 my-1 border-b border-gray-200" />
-
               {/* Individual maps */}
               {maps.map((map) => (
                 <Pressable

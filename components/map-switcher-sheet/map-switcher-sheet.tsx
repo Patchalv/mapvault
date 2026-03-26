@@ -5,13 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useActiveMap } from '@/hooks/use-active-map';
-import { ALL_MAPS_ID } from '@/lib/constants';
 
 export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
   function MapSwitcherSheet(_props, ref) {
     const { t } = useTranslation();
     const { bottom } = useSafeAreaInsets();
-    const { maps, activeMapId, setActiveMap, isAllMaps } = useActiveMap();
+    const { maps, activeMapId, setActiveMap } = useActiveMap();
 
     const handleSelect = useCallback(
       (mapId: string) => {
@@ -36,8 +35,6 @@ export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
       [],
     );
 
-    const currentActiveId = isAllMaps ? ALL_MAPS_ID : activeMapId;
-
     return (
       <BottomSheetModal
         ref={ref}
@@ -53,24 +50,9 @@ export const MapSwitcherSheet = forwardRef<BottomSheetModal>(
             </Text>
           </View>
 
-          {/* All Maps option */}
-          <Pressable
-            onPress={() => handleSelect(ALL_MAPS_ID)}
-            className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl ${currentActiveId === ALL_MAPS_ID ? 'bg-gray-100' : ''}`}
-          >
-            <Text
-              className={`text-base ${currentActiveId === ALL_MAPS_ID ? 'font-semibold text-gray-900' : 'font-normal text-gray-700'}`}
-            >
-              {t('settings.rows.allMaps')}
-            </Text>
-            {currentActiveId === ALL_MAPS_ID && (
-              <Ionicons name="checkmark" size={18} color="#22C55E" />
-            )}
-          </Pressable>
-
           {/* Per-map rows */}
           {maps.map((map) => {
-            const isSelected = currentActiveId === map.id;
+            const isSelected = activeMapId === map.id;
             return (
               <Pressable
                 key={map.id}
