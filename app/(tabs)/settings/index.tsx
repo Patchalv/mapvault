@@ -150,10 +150,13 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
             </Pressable>
             <View className="mx-4 h-px bg-gray-100" />
-            {/* Membership (no-op placeholder) */}
-            <View className="flex-row items-center px-4 py-3.5 opacity-40">
+            {/* Membership */}
+            <Pressable
+              onPress={() => router.push('/(tabs)/settings/membership')}
+              className="flex-row items-center px-4 py-3.5"
+            >
               <Ionicons name="diamond-outline" size={20} color="#374151" />
-              <Text className="ml-3 flex-1 text-base text-gray-700">
+              <Text className="ml-3 flex-1 text-base text-gray-800">
                 {t('settings.rows.membership')}
               </Text>
               {isPremium && (
@@ -162,7 +165,7 @@ export default function SettingsScreen() {
                 </View>
               )}
               <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-            </View>
+            </Pressable>
           </View>
         </View>
 

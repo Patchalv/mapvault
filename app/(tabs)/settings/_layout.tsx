@@ -17,6 +17,10 @@ export default function SettingsLayout() {
         name="maps"
         options={{ headerShown: true, title: t('settings.rows.manageMaps') }}
       />
+      <Stack.Screen
+        name="membership"
+        options={{ headerShown: true, title: t('membership.title') }}
+      />
     </Stack>
   );
 }

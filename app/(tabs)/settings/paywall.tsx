@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRevenueCat } from '@/hooks/use-revenuecat';
+import { FeatureRow } from '@/components/feature-row/feature-row';
 import { useProfile } from '@/hooks/use-profile';
 import { track } from '@/lib/analytics';
 import { LEGAL_URLS } from '@/lib/constants';
@@ -145,10 +146,10 @@ export default function PaywallScreen() {
             </Text>
           </View>
 
-          <FeatureRow label={t('paywall.mapsFeature')} free="1" premium={t('paywall.unlimited')} />
-          <FeatureRow label={t('paywall.placesFeature')} free="20" premium={t('paywall.unlimited')} />
-          <FeatureRow label={t('paywall.inviteLinksFeature')} free="—" premium="✓" />
-          <FeatureRow label={t('paywall.manageRolesFeature')} free="—" premium="✓" />
+          <FeatureRow label={t('features.places')} free="20" premium={t('paywall.unlimited')} />
+          <FeatureRow label={t('features.shareMaps')} free="—" premium="✓" />
+          <FeatureRow label={t('features.multipleMaps')} free="—" premium="✓" />
+          <FeatureRow label={t('features.tagsAndFilters')} free="✓" premium="✓" />
         </View>
 
         {/* Loading state */}
@@ -220,25 +221,5 @@ export default function PaywallScreen() {
         )}
       </View>
     </SafeAreaView>
-  );
-}
-
-function FeatureRow({
-  label,
-  free,
-  premium,
-}: {
-  label: string;
-  free: string;
-  premium: string;
-}) {
-  return (
-    <View className="flex-row border-t border-gray-200 py-3">
-      <Text className="flex-1 text-sm text-gray-900">{label}</Text>
-      <Text className="w-20 text-center text-sm text-gray-400">{free}</Text>
-      <Text className="w-20 text-center text-sm font-semibold text-gray-900">
-        {premium}
-      </Text>
-    </View>
   );
 }
