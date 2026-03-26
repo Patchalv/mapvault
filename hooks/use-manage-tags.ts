@@ -16,6 +16,7 @@ interface UpdateTagInput {
   name: string;
   emoji: string;
   color: string;
+  default_key: string | null;
 }
 
 interface DeleteTagInput {
@@ -72,10 +73,10 @@ export function useUpdateTag() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ tagId, mapId, name, emoji, color }: UpdateTagInput) => {
+    mutationFn: async ({ tagId, mapId, name, emoji, color, default_key }: UpdateTagInput) => {
       const { error } = await supabase
         .from('tags')
-        .update({ name: name.trim(), emoji, color })
+        .update({ name: name.trim(), emoji, color, default_key })
         .eq('id', tagId);
 
       if (error) {

@@ -105,12 +105,12 @@ serve(async (req) => {
       );
     }
 
-    // 6. Create default tags (same as signup trigger)
+    // 6. Create default tags with semantic keys for i18n
     const { error: tagsError } = await supabase.from("tags").insert([
-      { map_id: newMap.id, name: "Restaurant", emoji: "\u{1F37D}\u{FE0F}", color: "#EF4444", position: 0 },
-      { map_id: newMap.id, name: "Bar", emoji: "\u{1F378}", color: "#8B5CF6", position: 1 },
-      { map_id: newMap.id, name: "Cafe", emoji: "\u{2615}", color: "#F59E0B", position: 2 },
-      { map_id: newMap.id, name: "Friend", emoji: "\u{1F465}", color: "#3B82F6", position: 3 },
+      { map_id: newMap.id, name: "Restaurant", emoji: "\u{1F37D}\u{FE0F}", color: "#EF4444", position: 0, default_key: "restaurant" },
+      { map_id: newMap.id, name: "Bar", emoji: "\u{1F378}", color: "#8B5CF6", position: 1, default_key: "bar" },
+      { map_id: newMap.id, name: "Cafe", emoji: "\u{2615}", color: "#F59E0B", position: 2, default_key: "cafe" },
+      { map_id: newMap.id, name: "Friend", emoji: "\u{1F465}", color: "#3B82F6", position: 3, default_key: "friend" },
     ]);
 
     if (tagsError) {

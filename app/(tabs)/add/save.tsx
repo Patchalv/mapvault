@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import {
   View,
   Text,
@@ -253,7 +254,7 @@ export default function SaveScreen() {
                               isSelected ? 'text-white' : 'text-gray-700'
                             }`}
                           >
-                            {tag.name}
+                            {getTagDisplayName(tag)}
                           </Text>
                         </Pressable>
                       );

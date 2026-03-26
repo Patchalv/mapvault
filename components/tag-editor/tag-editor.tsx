@@ -8,6 +8,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import EmojiPicker from 'rn-emoji-keyboard';
 import { TAG_COLORS } from '@/lib/constants';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import type { Tag } from '@/types';
 
 interface TagEditorProps {
@@ -25,6 +26,7 @@ interface TagEditorProps {
     name: string;
     emoji: string;
     color: string;
+    default_key: string | null;
   }) => void;
   onDeleteTag: (input: { tagId: string; mapId: string }) => void;
   isPending: boolean;
@@ -46,7 +48,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
     // Reset form when editingTag changes
     useEffect(() => {
       if (editingTag) {
-        setName(editingTag.name);
+        setName(getTagDisplayName(editingTag));
         setEmoji(editingTag.emoji ?? '\u{1F4CD}');
         setColor(editingTag.color ?? TAG_COLORS[0]);
       } else {
@@ -60,12 +62,14 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
       if (!name.trim()) return;
 
       if (isEditing && editingTag) {
+        const nameChanged = name.trim() !== getTagDisplayName(editingTag);
         onUpdateTag({
           tagId: editingTag.id,
           mapId,
           name,
           emoji,
           color,
+          default_key: nameChanged ? null : editingTag.default_key,
         });
       } else {
         onCreateTag({ mapId, name, emoji, color });
@@ -77,7 +81,7 @@ export const TagEditor = forwardRef<BottomSheetModal, TagEditorProps>(
 
       Alert.alert(
         t('tagEditor.deleteTagTitle'),
-        t('tagEditor.deleteTagMessage', { tagName: editingTag.name }),
+        t('tagEditor.deleteTagMessage', { tagName: getTagDisplayName(editingTag) }),
         [
           { text: t('common.cancel'), style: 'cancel' },
           {
