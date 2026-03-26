@@ -126,7 +126,8 @@
     "whatsIncluded": "What's included",
     "subscription": "Subscription",
     "manageSubscription": "Manage subscription",
-    "manageSubscriptionHint": "Opens App Store or Google Play"
+    "manageSubscriptionHint": "Opens App Store or Google Play",
+    "manageSubscriptionError": "Couldn't open subscription management. Please try again."
   },
   "features": {
     "places": "Places",

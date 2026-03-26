@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,17 +23,23 @@ import { FeatureRow } from '@/components/feature-row/feature-row';
 
 export default function MembershipScreen() {
   const { t } = useTranslation();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { offerings, restore, isRestoring } = useRevenueCat();
   const { data: placeCount, isLoading: isLoadingCount } = usePlaceCount();
 
-  const isPremium = profile?.entitlement === 'premium';
-  const plan = isPremium ? ('premium' as const) : ('free' as const);
+  const plan =
+    profile?.entitlement === 'premium'
+      ? 'premium'
+      : profile?.entitlement === 'free'
+        ? 'free'
+        : null;
 
+  const screenViewedRef = useRef(false);
   useEffect(() => {
+    if (!plan || screenViewedRef.current) return;
+    screenViewedRef.current = true;
     track('membership_screen_viewed', { plan });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // fire once on mount; plan at entry time is what matters for funnel attribution
+  }, [plan]);
 
   const priceString = offerings?.current?.annual?.product.priceString ?? null;
 
@@ -59,16 +65,30 @@ export default function MembershipScreen() {
 
   const handleManageSubscription = async () => {
     track('membership_manage_subscription_tapped', { plan: 'premium' });
-    if (Platform.OS === 'ios') {
-      await Purchases.showManageSubscriptions();
-    } else {
-      await Linking.openURL('https://play.google.com/store/account/subscriptions');
+    try {
+      if (Platform.OS === 'ios') {
+        await Purchases.showManageSubscriptions();
+      } else {
+        await Linking.openURL('https://play.google.com/store/account/subscriptions');
+      }
+    } catch {
+      Alert.alert(t('common.error'), t('membership.manageSubscriptionError'));
     }
   };
 
   const safeCount = isLoadingCount ? null : (placeCount ?? null);
   const barPercent = safeCount !== null ? (safeCount / FREE_TIER.maxPlaces) * 100 : 0;
   const isWarning = safeCount !== null && safeCount >= 15;
+
+  if (isLoadingProfile || !plan) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#EF4444" />
+      </SafeAreaView>
+    );
+  }
+
+  const isPremium = plan === 'premium';
 
   if (isPremium) {
     return (
@@ -199,8 +219,8 @@ export default function MembershipScreen() {
               free="20"
               premium={t('paywall.unlimited')}
             />
-            <FeatureRow label={t('features.shareMaps')} free="✗" premium="✓" />
-            <FeatureRow label={t('features.multipleMaps')} free="✗" premium="✓" />
+            <FeatureRow label={t('features.shareMaps')} free="—" premium="✓" />
+            <FeatureRow label={t('features.multipleMaps')} free="—" premium="✓" />
             <FeatureRow label={t('features.tagsAndFilters')} free="✓" premium="✓" />
           </View>
         </View>

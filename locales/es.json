@@ -126,7 +126,8 @@
     "whatsIncluded": "Qué incluye",
     "subscription": "Suscripción",
     "manageSubscription": "Gestionar suscripción",
-    "manageSubscriptionHint": "Abre App Store o Google Play"
+    "manageSubscriptionHint": "Abre App Store o Google Play",
+    "manageSubscriptionError": "No se pudo abrir la gestión de suscripción. Inténtalo de nuevo."
   },
   "features": {
     "places": "Lugares",
