@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ALL_MAPS_ID } from '@/lib/constants';
 import type { MapPlaceWithDetails } from '@/types';
 
 export function useDeletePlace(activeMapId: string | null) {
@@ -26,19 +25,7 @@ export function useDeletePlace(activeMapId: string | null) {
         old?.filter((p) => p.id !== mapPlaceId)
       );
 
-      let previousAll: MapPlaceWithDetails[] | undefined;
-      if (activeMapId !== ALL_MAPS_ID) {
-        const allKey = ['map-places', ALL_MAPS_ID];
-        previousAll =
-          queryClient.getQueryData<MapPlaceWithDetails[]>(allKey);
-        if (previousAll) {
-          queryClient.setQueryData<MapPlaceWithDetails[]>(allKey, (old) =>
-            old?.filter((p) => p.id !== mapPlaceId)
-          );
-        }
-      }
-
-      return { previous, previousAll };
+      return { previous };
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
@@ -47,22 +34,11 @@ export function useDeletePlace(activeMapId: string | null) {
           context.previous
         );
       }
-      if (context?.previousAll && activeMapId !== ALL_MAPS_ID) {
-        queryClient.setQueryData(
-          ['map-places', ALL_MAPS_ID],
-          context.previousAll
-        );
-      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ['map-places', activeMapId],
       });
-      if (activeMapId !== ALL_MAPS_ID) {
-        queryClient.invalidateQueries({
-          queryKey: ['map-places', ALL_MAPS_ID],
-        });
-      }
       queryClient.invalidateQueries({ queryKey: ['place-count'] });
     },
   });

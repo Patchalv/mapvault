@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ALL_MAPS_ID } from '@/lib/constants';
 import type { MapPlaceWithDetails, Tag } from '@/types';
 
 interface ToggleTagInput {
@@ -50,25 +49,7 @@ export function useUpdatePlaceTags(activeMapId: string | null) {
         })
       );
 
-      let previousAll: MapPlaceWithDetails[] | undefined;
-      if (activeMapId !== ALL_MAPS_ID) {
-        const allKey = ['map-places', ALL_MAPS_ID];
-        previousAll =
-          queryClient.getQueryData<MapPlaceWithDetails[]>(allKey);
-        if (previousAll) {
-          queryClient.setQueryData<MapPlaceWithDetails[]>(allKey, (old) =>
-            old?.map((p) => {
-              if (p.id !== mapPlaceId) return p;
-              const newTags = currentlyAssigned
-                ? p.map_place_tags.filter((mpt) => mpt.tag_id !== tagId)
-                : [...p.map_place_tags, { tag_id: tagId, tags: tag }];
-              return { ...p, map_place_tags: newTags };
-            })
-          );
-        }
-      }
-
-      return { previous, previousAll };
+      return { previous };
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
@@ -77,22 +58,11 @@ export function useUpdatePlaceTags(activeMapId: string | null) {
           context.previous
         );
       }
-      if (context?.previousAll && activeMapId !== ALL_MAPS_ID) {
-        queryClient.setQueryData(
-          ['map-places', ALL_MAPS_ID],
-          context.previousAll
-        );
-      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ['map-places', activeMapId],
       });
-      if (activeMapId !== ALL_MAPS_ID) {
-        queryClient.invalidateQueries({
-          queryKey: ['map-places', ALL_MAPS_ID],
-        });
-      }
     },
   });
 }
