@@ -18,7 +18,7 @@ export function usePlaceSearch() {
         clearTimeout(timerRef.current);
       }
 
-      if (!input.trim() || input.trim().length < PLACES_SEARCH.minQueryLength) {
+      if (input.trim().length < PLACES_SEARCH.minQueryLength) {
         setPredictions([]);
         setIsSearching(false);
         return;
@@ -37,11 +37,11 @@ export function usePlaceSearch() {
           const results = await searchPlaces(input, location, controller.signal);
           setPredictions(results);
           track('place_search_query', { query_length: input.length });
+          setIsSearching(false);
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') return;
           setPredictions([]);
           setError('Search failed. Check your connection and try again.');
-        } finally {
           setIsSearching(false);
         }
       }, PLACES_SEARCH.debounceMs);
