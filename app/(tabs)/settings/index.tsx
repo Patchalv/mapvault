@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/use-profile';
 import { useActiveMap } from '@/hooks/use-active-map';
 import { logOutUser } from '@/lib/revenuecat';
@@ -16,6 +17,7 @@ import { MapSwitcherSheet } from '@/components/map-switcher-sheet/map-switcher-s
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: profile, isLoading: isLoadingProfile } = useProfile();
   const { activeMapName, isAllMaps } = useActiveMap();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -38,7 +40,9 @@ export default function SettingsScreen() {
     if (error) {
       Alert.alert(t('common.error'), error.message);
       setIsSigningOut(false);
+      return;
     }
+    queryClient.clear();
   }
 
   function handleMyMapPress() {

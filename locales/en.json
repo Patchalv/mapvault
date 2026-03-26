@@ -36,7 +36,8 @@
     "viewerCannotEdit": "You're a viewer of this map. Switch to a map you can edit to add places.",
     "searchPlaceholder": "Search for a place...",
     "searchHint": "Search for a restaurant, cafe, bar, or any place to add to your map.",
-    "noResults": "No results found. Try a different search."
+    "noResults": "No results found. Try a different search.",
+    "searchError": "Search failed. Check your connection and try again."
   },
   "savePlace": {
     "title": "Save Place",

@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from '@/hooks/use-location';
 import { searchPlaces, type PlacePrediction } from '@/lib/google-places';
 import { track } from '@/lib/analytics';
 import { PLACES_SEARCH } from '@/lib/constants';
 
 export function usePlaceSearch() {
+  const { t } = useTranslation();
   const { location } = useLocation();
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -42,7 +44,7 @@ export function usePlaceSearch() {
         } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') return;
           setPredictions([]);
-          setError('Search failed. Check your connection and try again.');
+          setError(t('addPlace.searchError'));
           setIsSearching(false);
         }
       }, PLACES_SEARCH.debounceMs);
