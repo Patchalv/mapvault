@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useProfile } from '@/hooks/use-profile';
 import { useMaps } from '@/hooks/use-maps';
 import { useActiveMap } from '@/hooks/use-active-map';
@@ -122,20 +123,23 @@ export default function ManageMapsScreen() {
       >
         {/* My Maps Section */}
         <View className="mb-6">
-          <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-base font-semibold text-gray-900">
-              {t('profile.manageMaps')}
-            </Text>
-            <Pressable
-              onPress={handleNewMap}
-              disabled={isCreating}
-              className="flex-row items-center rounded-lg bg-blue-500 px-3 py-1.5"
-            >
-              <FontAwesome name="plus" size={12} color="#FFFFFF" />
-              <Text className="ml-1.5 text-sm font-semibold text-white">
-                {t('profile.newMap')}
+          <View className="mb-3">
+            <View className="mb-1 flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-gray-900">
+                {t('profile.manageMaps')}
               </Text>
-            </Pressable>
+              <Pressable
+                onPress={handleNewMap}
+                disabled={isCreating}
+                className="flex-row items-center rounded-lg bg-blue-500 px-3 py-1.5"
+              >
+                <FontAwesome name="plus" size={12} color="#FFFFFF" />
+                <Text className="ml-1.5 text-sm font-semibold text-white">
+                  {t('profile.newMap')}
+                </Text>
+              </Pressable>
+            </View>
+            <Text className="text-xs text-gray-500">{t('manageMaps.subtitle')}</Text>
           </View>
 
           {maps.map((membership) => {
@@ -148,18 +152,34 @@ export default function ManageMapsScreen() {
                 className="mb-2 flex-row items-center rounded-xl border border-gray-100 bg-white p-4"
                 onPress={() => router.push(`/(tabs)/settings/map/${map.id}`)}
               >
-                {/* Active dot */}
-                <View
-                  className={`mr-3 h-2.5 w-2.5 rounded-full ${
-                    isActive ? 'bg-green-500' : 'bg-transparent'
-                  }`}
-                />
-
                 {/* Map info */}
                 <View className="flex-1">
-                  <Text className="text-base font-medium text-gray-900">
-                    {map.name}
-                  </Text>
+                  <View className="mb-1 flex-row items-center gap-2">
+                    <Text className="text-base font-medium text-gray-900">
+                      {map.name}
+                    </Text>
+                    {isActive && (
+                      <View className="rounded-full bg-green-100 px-2 py-0.5">
+                        <Text className="text-xs font-semibold text-green-700">
+                          {t('manageMaps.activeBadge')}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View className="flex-row items-center gap-3">
+                    <View className="flex-row items-center gap-1">
+                      <Ionicons name="people-outline" size={12} color="#9CA3AF" />
+                      <Text className="text-xs text-gray-500">
+                        {(map.map_members?.length ?? 0).toString()}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                      <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                      <Text className="text-xs text-gray-500">
+                        {(map.map_places?.length ?? 0).toString()}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 {/* Role badge */}
@@ -194,6 +214,15 @@ export default function ManageMapsScreen() {
               </Pressable>
             );
           })}
+
+          {maps.length <= 3 && (
+            <View className="mt-2 flex-row items-start gap-2 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+              <Text className="text-lg">💡</Text>
+              <Text className="flex-1 text-xs text-gray-500">
+                {t('manageMaps.tip')}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
