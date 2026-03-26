@@ -15,7 +15,7 @@ export default function SettingsLayout() {
       />
       <Stack.Screen
         name="maps"
-        options={{ headerShown: true, title: t('profile.manageMaps') }}
+        options={{ headerShown: true, title: t('settings.rows.manageMaps') }}
       />
     </Stack>
   );

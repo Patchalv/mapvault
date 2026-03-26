@@ -115,7 +115,7 @@ export default function ManageMapsScreen() {
       <ScrollView
         style={{ flex: 1, backgroundColor: '#FFFFFF' }}
         contentContainerStyle={{
-          paddingTop: insets.top + 16,
+          paddingTop: 16,
           paddingBottom: insets.bottom + 32,
           paddingHorizontal: 20,
         }}
