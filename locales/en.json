@@ -57,7 +57,15 @@
     "avatarLabel": "{{name}}'s avatar",
     "editDisplayNameTitle": "Edit Display Name",
     "displayNamePlaceholder": "Display name",
-    "deleteAccount": "Delete account"
+    "deleteAccount": "Delete account",
+    "manageMaps": "Maps",
+    "newMap": "New Map",
+    "mapLimitTitle": "Map Limit Reached",
+    "mapLimitMessage": "Free accounts are limited to 1 map. Upgrade to premium for unlimited maps.",
+    "newMapPromptTitle": "New Map",
+    "newMapPromptMessage": "Give your new map a name.",
+    "newMapPlaceholder": "Map name",
+    "create": "Create"
   },
   "mapSettings": {
     "title": "Map Settings",
@@ -277,7 +285,10 @@
   },
   "manageMaps": {
     "loading": "Loading your maps...",
-    "loadError": "Couldn't load your maps. Check your connection and try again."
+    "loadError": "Couldn't load your maps. Check your connection and try again.",
+    "subtitle": "Tap a map to manage it. The active one shows on Explore.",
+    "activeBadge": "Active",
+    "tip": "Create maps to organise places by themes or groups of people — Rome trip, Brunch buddies, or Best cocktails in London."
   },
   "settings": {
     "title": "Settings",

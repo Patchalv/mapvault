@@ -10,7 +10,7 @@ export function useMaps() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('map_members')
-        .select('map_id, role, maps(id, name, created_by)')
+        .select('map_id, role, maps(id, name, created_by, map_members(*), map_places(*))')
         .eq('user_id', user!.id);
 
       if (error) throw error;

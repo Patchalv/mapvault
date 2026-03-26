@@ -57,7 +57,15 @@
     "avatarLabel": "Avatar de {{name}}",
     "editDisplayNameTitle": "Editar nombre",
     "displayNamePlaceholder": "Nombre de pantalla",
-    "deleteAccount": "Eliminar cuenta"
+    "deleteAccount": "Eliminar cuenta",
+    "manageMaps": "Mapas",
+    "newMap": "Nuevo mapa",
+    "mapLimitTitle": "Límite de mapas alcanzado",
+    "mapLimitMessage": "Las cuentas gratuitas están limitadas a 1 mapa. Actualiza a premium para mapas ilimitados.",
+    "newMapPromptTitle": "Nuevo mapa",
+    "newMapPromptMessage": "Dale un nombre a tu nuevo mapa.",
+    "newMapPlaceholder": "Nombre del mapa",
+    "create": "Crear"
   },
   "mapSettings": {
     "title": "Configuración del mapa",
@@ -277,7 +285,10 @@
   },
   "manageMaps": {
     "loading": "Cargando tus mapas...",
-    "loadError": "No se pudieron cargar tus mapas. Comprueba tu conexión e inténtalo de nuevo."
+    "loadError": "No se pudieron cargar tus mapas. Comprueba tu conexión e inténtalo de nuevo.",
+    "subtitle": "Toca un mapa para gestionarlo. El activo se muestra en Explorar.",
+    "activeBadge": "Activo",
+    "tip": "Crea mapas para organizar lugares por temas o grupos de personas — viaje a Roma, amigos de brunch, o los mejores cócteles de Londres."
   },
   "settings": {
     "title": "Ajustes",
