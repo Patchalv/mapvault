@@ -86,7 +86,8 @@
     "deleteMapButton": "Delete Map",
     "leaveMapButton": "Leave Map",
     "couldntLoadMap": "Couldn't load map details.",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "sync": "Sync"
   },
   "paywall": {
     "title": "Premium",

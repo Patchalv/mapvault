@@ -21,7 +21,6 @@ interface ExploreHeaderProps {
   onOpenFilters: () => void;
   activeFilterCount: number;
   onRecenter?: () => void;
-  onRefresh?: () => void;
 }
 
 export function ExploreHeader({
@@ -34,7 +33,6 @@ export function ExploreHeader({
   onOpenFilters,
   activeFilterCount,
   onRecenter,
-  onRefresh,
 }: ExploreHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
@@ -118,16 +116,6 @@ export function ExploreHeader({
 
         {/* Right controls */}
         <View className="flex-row items-center gap-2">
-          {/* Refresh button (map view only) */}
-          {viewMode === 'map' && onRefresh && (
-            <Pressable
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-sm"
-              onPress={onRefresh}
-            >
-              <FontAwesome name="refresh" size={16} color="#374151" />
-            </Pressable>
-          )}
-
           {/* Recenter button (map view only) */}
           {viewMode === 'map' && onRecenter && (
             <Pressable

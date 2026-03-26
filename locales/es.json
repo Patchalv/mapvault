@@ -86,7 +86,8 @@
     "deleteMapButton": "Eliminar mapa",
     "leaveMapButton": "Abandonar mapa",
     "couldntLoadMap": "No se pudieron cargar los detalles del mapa.",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "sync": "Sincronizar"
   },
   "paywall": {
     "title": "Premium",

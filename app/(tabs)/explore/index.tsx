@@ -302,6 +302,7 @@ export default function ExploreScreen() {
   const handleRecenter = useCallback(async () => {
     if (isRecenteringRef.current) return;
     isRecenteringRef.current = true;
+    refetch();
     try {
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
@@ -318,7 +319,7 @@ export default function ExploreScreen() {
     } finally {
       isRecenteringRef.current = false;
     }
-  }, []);
+  }, [refetch]);
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -418,7 +419,6 @@ export default function ExploreScreen() {
         onOpenFilters={handleOpenFilters}
         activeFilterCount={activeFilterCount}
         onRecenter={viewMode === 'map' ? handleRecenter : undefined}
-        onRefresh={viewMode === 'map' ? handleRefresh : undefined}
       />
 
       {/* Place Detail Sheet */}
