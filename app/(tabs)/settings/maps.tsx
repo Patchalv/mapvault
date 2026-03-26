@@ -170,13 +170,13 @@ export default function ManageMapsScreen() {
                     <View className="flex-row items-center gap-1">
                       <Ionicons name="people-outline" size={12} color="#9CA3AF" />
                       <Text className="text-xs text-gray-500">
-                        {(map.map_members?.length ?? 0).toString()}
+                        {map.map_members?.length ?? 0}
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-1">
                       <Ionicons name="location-outline" size={12} color="#9CA3AF" />
                       <Text className="text-xs text-gray-500">
-                        {(map.map_places?.length ?? 0).toString()}
+                        {map.map_places?.length ?? 0}
                       </Text>
                     </View>
                   </View>
