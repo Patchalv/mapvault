@@ -9,7 +9,16 @@ The Manage Maps screen currently uses a green dot before the map name to indicat
 
 ## Changes
 
-### 1. Replace active indicator: dot → "Active" tag
+### 1. Section subtitle
+
+Add a one-liner subtitle below the "Maps" section header to explain what the active map controls.
+
+**Copy (EN):** `"Tap a map to manage it. The active one shows on Explore."`
+**Copy (ES):** `"Toca un mapa para gestionarlo. El activo se muestra en Explorar."`
+**i18n key:** `manageMaps.subtitle`
+**Style:** `text-xs text-gray-500`, rendered directly below the "Maps" heading, above the map rows.
+
+### 2. Replace active indicator: dot → "Active" tag
 
 **Remove:** The `h-2.5 w-2.5 rounded-full` dot before the map name (currently `bg-green-500` when active, `bg-transparent` otherwise).
 
@@ -19,7 +28,7 @@ The Manage Maps screen currently uses a green dot before the map name to indicat
 - Only rendered when `isActive === true`
 - The map name + badge sit in a `flex-row items-center gap-2` wrapper
 
-### 2. Map metadata row (members + places)
+### 3. Map metadata row (members + places)
 
 Each map row gets a secondary line below the map name showing:
 
@@ -27,19 +36,21 @@ Each map row gets a secondary line below the map name showing:
 - **Place count:** `Ionicons name="location-outline"` (size 12, color `#9CA3AF`) + count number
 - Layout: `flex-row items-center gap-3`, `text-xs text-gray-500`
 
-**Data source:** The `useMaps` hook query needs to be extended to include counts. The `maps(...)` nested select will be expanded to:
+**Data source:** The `useMaps` hook query will be expanded to fetch nested records:
 
 ```
-maps(id, name, created_by, map_members(count), map_places(count))
+maps(id, name, created_by, map_members(*), map_places(*))
 ```
 
-This uses PostgREST's count embedding. Each returns an array `[{ count: number }]`, accessed as `map.map_members?.[0]?.count ?? 0` and `map.map_places?.[0]?.count ?? 0`.
+Counts are derived client-side: `map.map_members?.length ?? 0` and `map.map_places?.length ?? 0`. This approach works without any Supabase configuration changes and is fully type-safe with auto-inferred types.
 
-The `useMaps` hook return type will need explicit typing since the auto-inferred DB types don't include the count shape. A local type alias will be added in `use-maps.ts`.
+> **Note on the `(count)` aggregate syntax:** PostgREST supports `map_members(count)` but it requires `pgrst.db_aggregates_enabled = 'true'` to be set on the Supabase project (off by default), and has a known TypeScript inference bug (#20562) that requires explicit type casting. The `(*)` + `.length` approach is preferred for reliability.
 
-**Note:** `useMaps` is shared across `use-active-map.ts`, `use-map-role.ts`, and `map/[id]/index.tsx`. The added count data is additive and won't affect those consumers.
+**Performance:** Acceptable for this use case. Free users are capped at 20 places per map; premium maps with larger counts are still well within range for a settings list screen that is not a hot path.
 
-### 3. Empty-state tip
+**Note:** `useMaps` is shared across `use-active-map.ts`, `use-map-role.ts`, and `map/[id]/index.tsx`. The additional fields returned are ignored by those consumers — no changes needed there.
+
+### 4. Empty-state tip
 
 When `maps.length <= 3`, render a subtle tip box below the map list (inside the `ScrollView`, after the map rows).
 
@@ -50,10 +61,13 @@ When `maps.length <= 3`, render a subtle tip box below the map list (inside the 
 
 **i18n key:** `manageMaps.tip`
 
+> **Note:** `maps.length` counts all maps the user is a member of, including ones they were invited to — not just maps they created. This is intentional; the threshold of 3 is generous enough to cover shared-map users.
+
 ### Translation keys summary
 
 | Key | EN | ES |
 |-----|----|----|
+| `manageMaps.subtitle` | `Tap a map to manage it. The active one shows on Explore.` | `Toca un mapa para gestionarlo. El activo se muestra en Explorar.` |
 | `manageMaps.activeBadge` | `Active` | `Activo` |
 | `manageMaps.tip` | *(copy above)* | *(copy above)* |
 
@@ -61,17 +75,18 @@ When `maps.length <= 3`, render a subtle tip box below the map list (inside the 
 
 | File | Change |
 |------|--------|
-| `hooks/use-maps.ts` | Expand select query to include `map_members(count), map_places(count)`; add explicit return type |
+| `hooks/use-maps.ts` | Expand select to include `map_members(*), map_places(*)` |
 | `app/(tabs)/settings/maps.tsx` | Remove dot, add "Active" tag, add metadata row, add conditional tip |
-| `locales/en.json` | Add `manageMaps.tip` |
-| `locales/es.json` | Add `manageMaps.tip` |
+| `locales/en.json` | Add `manageMaps.subtitle`, `manageMaps.activeBadge`, `manageMaps.tip` |
+| `locales/es.json` | Add `manageMaps.subtitle`, `manageMaps.activeBadge`, `manageMaps.tip` |
 
 ## Verification
 
 1. Run `npm run start:dev` and open the Manage Maps screen
-2. Confirm the active map shows a green "Active" pill — no dot
-3. Confirm member and place counts appear under each map name
-4. With ≤ 3 maps: confirm the tip appears below the list
-5. With > 3 maps: confirm the tip is hidden
-6. Run `npm run check:i18n` — all keys match
-7. Run `npx tsc --noEmit` — no type errors
+2. Confirm subtitle appears below the "Maps" heading
+3. Confirm the active map shows a green "Active" pill — no dot
+4. Confirm member and place counts appear under each map name
+5. With ≤ 3 maps: confirm the tip appears below the list
+6. With > 3 maps: confirm the tip is hidden
+7. Run `npm run check:i18n` — all keys match
+8. Run `npx tsc --noEmit` — no type errors
