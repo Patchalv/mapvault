@@ -48,7 +48,6 @@ export default function MapSettingsScreen() {
   const { mutate: deleteTag, isPending: isDeletingTag } = useDeleteTag();
   const tagEditorRef = useRef<BottomSheetModal>(null);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
-  const isSyncingRef = useRef(false);
 
   // Find current map and role
   const membership = mapMembers?.find((m) => m.maps?.id === id);
@@ -126,20 +125,18 @@ export default function MapSettingsScreen() {
   };
 
   const handleSync = useCallback(async () => {
-    if (!id || isSyncingRef.current) return;
-    isSyncingRef.current = true;
+    if (!id || isSyncing) return;
     setIsSyncing(true);
     try {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['maps'] }),
-        queryClient.invalidateQueries({ queryKey: ['tags', id] }),
-        queryClient.invalidateQueries({ queryKey: ['map-members', id] }),
+        queryClient.refetchQueries({ queryKey: ['maps'] }),
+        queryClient.refetchQueries({ queryKey: ['tags', id] }),
+        queryClient.refetchQueries({ queryKey: ['map-members', id] }),
       ]);
     } finally {
-      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [id, queryClient]);
+  }, [id, isSyncing, queryClient]);
 
   const handleAddTag = useCallback(() => {
     Keyboard.dismiss();

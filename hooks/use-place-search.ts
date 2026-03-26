@@ -49,7 +49,7 @@ export function usePlaceSearch() {
         }
       }, PLACES_SEARCH.debounceMs);
     },
-    [location]
+    [location, t]
   );
 
   const clear = useCallback(() => {
