@@ -24,8 +24,6 @@ export const APP_SCHEME = 'mapvault';
 
 export const APP_DOMAIN = 'https://www.mapvault.app';
 
-export const ALL_MAPS_ID = '__all__' as const;
-
 export const ERROR_CODES = {
   freemiumLimitExceeded: 'FREEMIUM_LIMIT_EXCEEDED',
 } as const;
