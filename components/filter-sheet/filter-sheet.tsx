@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useMemo } from 'react';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetModalProps } from '@gorhom/bottom-sheet';
@@ -160,7 +161,7 @@ export const FilterSheet = forwardRef<BottomSheetModal, FilterSheetProps>(
                           color: isSelected ? color : '#374151',
                         }}
                       >
-                        {tag.name}
+                        {getTagDisplayName(tag)}
                       </Text>
                     </Pressable>
                   );

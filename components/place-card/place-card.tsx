@@ -1,5 +1,6 @@
 import { View, Text, Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import type { MapPlaceWithDetails } from '@/types';
 
 const DEFAULT_COLOR = '#6B7280';
@@ -89,7 +90,7 @@ export function PlaceCard({ place, onPress }: PlaceCardProps) {
                     fontWeight: '500',
                   }}
                 >
-                  {mpt.tags.name}
+                  {getTagDisplayName(mpt.tags)}
                 </Text>
               </View>
             ))}

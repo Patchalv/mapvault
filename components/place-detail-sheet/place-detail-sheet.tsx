@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
 import BottomSheet, {
   BottomSheetModal,
@@ -211,7 +212,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                                 : '#9CA3AF',
                             }}
                           >
-                            {tag.name}
+                            {getTagDisplayName(tag)}
                           </Text>
                         </Pressable>
                       );
@@ -278,7 +279,7 @@ export const PlaceDetailSheet = forwardRef<BottomSheet, PlaceDetailSheetProps>(
                           color: mpt.tags.color ?? '#6B7280',
                         }}
                       >
-                        {mpt.tags.name}
+                        {getTagDisplayName(mpt.tags)}
                       </Text>
                     </View>
                   ))}

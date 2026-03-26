@@ -320,6 +320,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          default_key: string | null
           emoji: string | null
           id: string
           map_id: string
@@ -329,6 +330,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          default_key?: string | null
           emoji?: string | null
           id?: string
           map_id: string
@@ -338,6 +340,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          default_key?: string | null
           emoji?: string | null
           id?: string
           map_id?: string

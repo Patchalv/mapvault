@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { getTagDisplayName } from '@/lib/get-tag-display-name';
 import {
   View,
   Text,
@@ -167,6 +168,7 @@ export default function MapSettingsScreen() {
       name: string;
       emoji: string;
       color: string;
+      default_key: string | null;
     }) => {
       updateTag(input, {
         onSuccess: () => tagEditorRef.current?.dismiss(),
@@ -325,7 +327,7 @@ export default function MapSettingsScreen() {
                           style={{ color: tag.color ?? '#374151' }}
                           className="text-sm font-medium"
                         >
-                          {tag.name}
+                          {getTagDisplayName(tag)}
                         </Text>
                       </Pressable>
                     ) : (
@@ -344,7 +346,7 @@ export default function MapSettingsScreen() {
                           style={{ color: tag.color ?? '#374151' }}
                           className="text-sm font-medium"
                         >
-                          {tag.name}
+                          {getTagDisplayName(tag)}
                         </Text>
                       </View>
                     )

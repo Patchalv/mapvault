@@ -273,6 +273,12 @@
     "add": "Add",
     "settings": "Settings"
   },
+  "defaultTags": {
+    "restaurant": "Restaurant",
+    "bar": "Bar",
+    "cafe": "Cafe",
+    "friend": "Friend"
+  },
   "tagEditor": {
     "editTagTitle": "Edit Tag",
     "newTagTitle": "New Tag",

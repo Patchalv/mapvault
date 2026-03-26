@@ -273,6 +273,12 @@
     "add": "Añadir",
     "settings": "Ajustes"
   },
+  "defaultTags": {
+    "restaurant": "Restaurante",
+    "bar": "Bar",
+    "cafe": "Café",
+    "friend": "Amigo"
+  },
   "tagEditor": {
     "editTagTitle": "Editar etiqueta",
     "newTagTitle": "Nueva etiqueta",

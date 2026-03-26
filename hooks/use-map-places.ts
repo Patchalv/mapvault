@@ -15,7 +15,7 @@ export function useMapPlaces(mapId: string | null) {
           `
           id, note, created_at, added_by, map_id, place_id,
           places (id, name, address, latitude, longitude, google_place_id, google_category),
-          map_place_tags (tag_id, tags (id, name, emoji, color, position)),
+          map_place_tags (tag_id, tags (id, name, emoji, color, position, default_key)),
           place_visits (visited)
           `
         )
