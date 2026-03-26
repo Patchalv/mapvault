@@ -32,7 +32,8 @@ export default function MembershipScreen() {
 
   useEffect(() => {
     track('membership_screen_viewed', { plan });
-  }, [plan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fire once on mount; plan at entry time is what matters for funnel attribution
 
   const priceString = offerings?.current?.annual?.product.priceString ?? null;
 
