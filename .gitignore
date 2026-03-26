@@ -47,3 +47,4 @@ yarn-error.*
 .worktrees/
 .keys/
 .env.local
+.superpowers/
