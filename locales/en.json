@@ -285,7 +285,10 @@
   },
   "manageMaps": {
     "loading": "Loading your maps...",
-    "loadError": "Couldn't load your maps. Check your connection and try again."
+    "loadError": "Couldn't load your maps. Check your connection and try again.",
+    "subtitle": "Tap a map to manage it. The active one shows on Explore.",
+    "activeBadge": "Active",
+    "tip": "Create maps to organise places by themes or groups of people — Rome trip, Brunch buddies, or Best cocktails in London."
   },
   "settings": {
     "title": "Settings",
