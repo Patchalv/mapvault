@@ -97,14 +97,17 @@ export default function SettingsScreen() {
             {t('settings.sections.maps')}
           </Text>
           <View className="overflow-hidden rounded-2xl bg-white">
-            {/* Manage Maps (no-op placeholder) */}
-            <View className="flex-row items-center px-4 py-3.5 opacity-40">
+            {/* Manage Maps */}
+            <Pressable
+              onPress={() => router.push('/(tabs)/settings/maps')}
+              className="flex-row items-center px-4 py-3.5"
+            >
               <Ionicons name="layers-outline" size={20} color="#374151" />
-              <Text className="ml-3 flex-1 text-base text-gray-700">
+              <Text className="ml-3 flex-1 text-base text-gray-800">
                 {t('settings.rows.manageMaps')}
               </Text>
               <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-            </View>
+            </Pressable>
             <View className="mx-4 h-px bg-gray-100" />
             {/* My Map */}
             <Pressable onPress={handleMyMapPress} className="px-4 py-3.5">

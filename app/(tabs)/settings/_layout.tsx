@@ -13,6 +13,10 @@ export default function SettingsLayout() {
         name="profile"
         options={{ headerShown: true, title: t('settings.rows.profile') }}
       />
+      <Stack.Screen
+        name="maps"
+        options={{ headerShown: true, title: t('profile.manageMaps') }}
+      />
     </Stack>
   );
 }

@@ -53,6 +53,7 @@ type AnalyticsEvents = {
   purchase_failed: { reason: 'cancelled' | 'error' };
   review_prompted: { trigger: 'place_visited' | 'places_saved_milestone' | 'directions_after_filter' };
   settings_viewed: Record<string, never>;
+  manage_maps_viewed: Record<string, never>;
   settings_upgrade_cta_tapped: { entitlement: 'free' };
   settings_map_switcher_opened: Record<string, never>;
   settings_rate_review_tapped: Record<string, never>;
