@@ -7,12 +7,17 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as WebBrowser from 'expo-web-browser';
 import { useFonts } from "expo-font";
 import { Slot, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+
+// Required on Android: tells openAuthSessionAsync that the OAuth redirect deep
+// link has been received, completing the pending auth session. No-op on iOS.
+WebBrowser.maybeCompleteAuthSession();
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN!,

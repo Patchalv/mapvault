@@ -45,6 +45,8 @@ export default function SignInScreen() {
     try {
       const result = await signInWithGoogle();
       if (!result.success) {
+        // User deliberately dismissed the browser — no alert needed, let them retry.
+        if (result.cancelled) return;
         Alert.alert(t('signIn.signInError'), result.error);
       } else {
         trackIfNewUser('google');

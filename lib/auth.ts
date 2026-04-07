@@ -4,7 +4,9 @@ import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 
 export async function signInWithGoogle(): Promise<
-  { success: true } | { success: false; error: string }
+  | { success: true }
+  | { success: false; cancelled: true }
+  | { success: false; cancelled: false; error: string }
 > {
   const redirectTo = makeRedirectUri({ scheme: 'mapvault' });
   if (__DEV__) {
@@ -20,17 +22,24 @@ export async function signInWithGoogle(): Promise<
   });
 
   if (error) {
-    return { success: false, error: error.message };
+    return { success: false, cancelled: false, error: error.message };
   }
 
   if (!data.url) {
-    return { success: false, error: 'No OAuth URL returned from Supabase.' };
+    return { success: false, cancelled: false, error: 'No OAuth URL returned from Supabase.' };
   }
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
   if (result.type !== 'success' || !result.url) {
-    return { success: false, error: 'Authentication was cancelled.' };
+    // 'locked' means another auth session is already open — treat the same as
+    // a user cancel, not a hard error, to avoid showing a confusing alert.
+    const wasCancelled =
+      result.type === 'dismiss' || result.type === 'cancel' || result.type === 'locked';
+    if (wasCancelled) {
+      return { success: false, cancelled: true };
+    }
+    return { success: false, cancelled: false, error: 'Authentication was cancelled.' };
   }
 
   const hashParams = new URLSearchParams(
@@ -41,7 +50,7 @@ export async function signInWithGoogle(): Promise<
   const refreshToken = hashParams.get('refresh_token');
 
   if (!accessToken || !refreshToken) {
-    return { success: false, error: 'Missing tokens in redirect URL.' };
+    return { success: false, cancelled: false, error: 'Missing tokens in redirect URL.' };
   }
 
   const { error: sessionError } = await supabase.auth.setSession({
@@ -50,7 +59,7 @@ export async function signInWithGoogle(): Promise<
   });
 
   if (sessionError) {
-    return { success: false, error: sessionError.message };
+    return { success: false, cancelled: false, error: sessionError.message };
   }
 
   // Sync Google profile data to profiles table.
