@@ -1,13 +1,13 @@
 import "@/global.css";
 import "@/lib/i18n";
 
-import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from "@/hooks/use-auth";
 import { setPostHogInstance } from "@/lib/analytics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as WebBrowser from 'expo-web-browser';
 import { useFonts } from "expo-font";
 import { Slot, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
