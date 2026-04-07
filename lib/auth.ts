@@ -32,8 +32,8 @@ export async function signInWithGoogle(): Promise<
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
   if (result.type !== 'success' || !result.url) {
-    // 'locked' means another auth session is already open — treat as a no-op,
-    // not a hard error, to avoid showing the user a confusing error alert.
+    // 'locked' means another auth session is already open — treat the same as
+    // a user cancel, not a hard error, to avoid showing a confusing alert.
     const wasCancelled =
       result.type === 'dismiss' || result.type === 'cancel' || result.type === 'locked';
     if (wasCancelled) {
