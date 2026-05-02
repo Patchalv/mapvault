@@ -159,7 +159,10 @@ export default function PaywallScreen() {
           <>
             {/* Price display */}
             <View className="mt-8 items-center rounded-xl border-2 border-blue-500 bg-blue-50 p-5">
-              <Text className="text-sm font-semibold text-blue-700">
+              <Text className="text-base font-bold text-blue-700">
+                {t('paywall.planTitle')}
+              </Text>
+              <Text className="mt-0.5 text-sm font-semibold text-blue-600">
                 {t('paywall.yearly')}
               </Text>
               <Text className="mt-1 text-2xl font-bold text-blue-700">

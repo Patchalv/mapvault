@@ -99,6 +99,7 @@
     "freeCol": "Free",
     "premiumCol": "Premium",
     "unlimited": "Unlimited",
+    "planTitle": "MapVault Premium",
     "yearly": "Yearly",
     "perYear": "{{price}}/year",
     "subscribe": "Subscribe",
