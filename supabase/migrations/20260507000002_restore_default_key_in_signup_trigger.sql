@@ -50,9 +50,18 @@ $$;
 
 -- Defensive backfill: any users whose signup ran while the buggy trigger was
 -- live will have default tags with NULL default_key. Match on name + position
--- to avoid touching user-renamed tags (same approach as the original backfill
--- in 20260326000001_add_default_key_to_tags.sql).
-UPDATE tags SET default_key = 'restaurant' WHERE default_key IS NULL AND name = 'Restaurant' AND position = 0;
-UPDATE tags SET default_key = 'bar'        WHERE default_key IS NULL AND name = 'Bar'        AND position = 1;
-UPDATE tags SET default_key = 'cafe'       WHERE default_key IS NULL AND name = 'Cafe'       AND position = 2;
-UPDATE tags SET default_key = 'friend'     WHERE default_key IS NULL AND name = 'Friend'     AND position = 3;
+-- AND emoji + color so a user-created tag that happens to share the name and
+-- position cannot be silently relabeled as a default. The trigger always
+-- inserts these exact values together, so the conjunction is safe.
+UPDATE tags SET default_key = 'restaurant'
+  WHERE default_key IS NULL AND name = 'Restaurant' AND position = 0
+    AND emoji = '🍽️' AND color = '#EF4444';
+UPDATE tags SET default_key = 'bar'
+  WHERE default_key IS NULL AND name = 'Bar' AND position = 1
+    AND emoji = '🍸' AND color = '#8B5CF6';
+UPDATE tags SET default_key = 'cafe'
+  WHERE default_key IS NULL AND name = 'Cafe' AND position = 2
+    AND emoji = '☕' AND color = '#F59E0B';
+UPDATE tags SET default_key = 'friend'
+  WHERE default_key IS NULL AND name = 'Friend' AND position = 3
+    AND emoji = '👥' AND color = '#3B82F6';

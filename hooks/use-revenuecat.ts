@@ -154,15 +154,16 @@ export function useRevenueCat() {
   // disabled query (revenueCatReady=false) is a no-op, so without this the
   // user-actionable error UI would silently do nothing in the missing-API-key
   // / failed-init case — the same bug class this fix is closing.
+  const refetchOfferings = offerings.refetch;
   const retryOfferings = useCallback(async () => {
     configureRevenueCat();
     const ready = isRevenueCatReady();
     setRevenueCatReady(ready);
     setConfigAttempted(true);
     if (!ready) return { ok: false } as const;
-    await offerings.refetch();
+    await refetchOfferings();
     return { ok: true } as const;
-  }, [offerings]);
+  }, [refetchOfferings]);
 
   // True once we know whether offerings are available — either RC failed to
   // configure (so we'll never load them), or the query has completed at least
