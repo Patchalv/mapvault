@@ -114,7 +114,10 @@
     "noPurchasesTitle": "No Purchases Found",
     "noPurchasesMessage": "We could not find any previous purchases to restore.",
     "restoreErrorMessage": "Failed to restore purchases. Please try again.",
-    "purchaseFallbackMessage": "Purchase failed. Please try again."
+    "purchaseFallbackMessage": "Purchase failed. Please try again.",
+    "offeringsErrorTitle": "Subscription options unavailable",
+    "offeringsErrorMessage": "We couldn't load subscription options right now. Please check your connection and try again, or restore a previous purchase.",
+    "tryAgain": "Try again"
   },
   "membership": {
     "title": "Membership",

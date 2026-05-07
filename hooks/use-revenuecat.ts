@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import * as Sentry from '@sentry/react-native';
 import { useAuth } from '@/hooks/use-auth';
-import { updateUserProperties } from '@/lib/analytics';
+import { track, updateUserProperties } from '@/lib/analytics';
 import {
   configureRevenueCat,
   isRevenueCatReady,
@@ -22,6 +23,7 @@ export function useRevenueCat() {
   const lastIdentifiedIdRef = useRef<string | null>(null);
   const isIdentifyingRef = useRef(false);
   const [revenueCatReady, setRevenueCatReady] = useState(isRevenueCatReady());
+  const [configAttempted, setConfigAttempted] = useState(isRevenueCatReady());
 
   // Configure SDK and identify user when authenticated
   useEffect(() => {
@@ -35,6 +37,7 @@ export function useRevenueCat() {
 
     const ready = isRevenueCatReady();
     setRevenueCatReady(ready);
+    setConfigAttempted(true);
     if (!ready) return;
     if (lastIdentifiedIdRef.current === userId) return; // already identified
     if (isIdentifyingRef.current) return; // logIn in flight
@@ -99,8 +102,75 @@ export function useRevenueCat() {
     queryKey: ['rc-offerings'],
     queryFn: getOfferings,
     staleTime: 30 * 60 * 1000, // 30 minutes
+    retry: 2,
     enabled: !!userId && revenueCatReady,
   });
+
+  // Capture offering failures once per resolved query (not per retry).
+  // queryFn-level capture would multiply by retry count.
+  const reportedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!offerings.isFetched) return;
+    if (offerings.isError && offerings.error) {
+      const key = `error:${offerings.errorUpdatedAt}`;
+      if (reportedKeyRef.current === key) return;
+      reportedKeyRef.current = key;
+      Sentry.captureException(offerings.error, {
+        tags: { context: 'rc_offerings', platform: Platform.OS },
+        extra: { userId, revenueCatReady },
+      });
+      track('paywall_offerings_load_failed', { reason: 'error' });
+      return;
+    }
+    const data = offerings.data;
+    if (data && !data.current?.annual) {
+      const key = `empty:${offerings.dataUpdatedAt}`;
+      if (reportedKeyRef.current === key) return;
+      reportedKeyRef.current = key;
+      Sentry.captureMessage('rc_offerings_empty', {
+        level: 'warning',
+        tags: { context: 'rc_offerings', platform: Platform.OS },
+        extra: {
+          userId,
+          revenueCatReady,
+          hasCurrent: !!data.current,
+          currentIdentifier: data.current?.identifier ?? null,
+        },
+      });
+      track('paywall_offerings_load_failed', { reason: 'empty' });
+    }
+  }, [
+    offerings.isFetched,
+    offerings.isError,
+    offerings.error,
+    offerings.errorUpdatedAt,
+    offerings.data,
+    offerings.dataUpdatedAt,
+    userId,
+    revenueCatReady,
+  ]);
+
+  // "Try again" needs to also re-attempt configuration: refetch() on a
+  // disabled query (revenueCatReady=false) is a no-op, so without this the
+  // user-actionable error UI would silently do nothing in the missing-API-key
+  // / failed-init case — the same bug class this fix is closing.
+  const refetchOfferings = offerings.refetch;
+  const retryOfferings = useCallback(async () => {
+    configureRevenueCat();
+    const ready = isRevenueCatReady();
+    setRevenueCatReady(ready);
+    setConfigAttempted(true);
+    if (!ready) return { ok: false } as const;
+    await refetchOfferings();
+    return { ok: true } as const;
+  }, [refetchOfferings]);
+
+  // True once we know whether offerings are available — either RC failed to
+  // configure (so we'll never load them), or the query has completed at least
+  // once. False during the initial config + first-fetch window so the paywall
+  // can keep a spinner up instead of flashing the error UI.
+  const isOfferingsResolved =
+    configAttempted && (!revenueCatReady || offerings.isFetched);
 
   const purchase = useMutation({
     mutationFn: (pkg: PurchasesPackage) => purchasePackage(pkg),
@@ -136,7 +206,9 @@ export function useRevenueCat() {
 
   return {
     offerings: offerings.data,
-    isLoadingOfferings: offerings.isLoading,
+    isOfferingsResolved,
+    isFetchingOfferings: offerings.isFetching,
+    retryOfferings,
     purchase: purchase.mutate,
     purchaseAsync: purchase.mutateAsync,
     isPurchasing: purchase.isPending,
