@@ -6,8 +6,10 @@ import Purchases, {
   type PurchasesPackage,
 } from 'react-native-purchases';
 import Constants from 'expo-constants';
+import * as Sentry from '@sentry/react-native';
 
 let isConfigured = false;
+let missingApiKeyReported = false;
 
 export function isRevenueCatReady(): boolean {
   return isConfigured;
@@ -21,7 +23,14 @@ export function configureRevenueCat(): void {
     : (Constants.expoConfig?.extra?.revenueCatGoogleApiKey as string) ?? '';
 
   if (!apiKey) {
-    console.warn('RevenueCat: No API key configured');
+    if (!missingApiKeyReported) {
+      missingApiKeyReported = true;
+      Sentry.captureMessage('revenuecat_missing_api_key', {
+        level: 'error',
+        tags: { context: 'revenuecat_config', platform: Platform.OS },
+      });
+    }
+    if (__DEV__) console.warn('RevenueCat: No API key configured');
     return;
   }
 

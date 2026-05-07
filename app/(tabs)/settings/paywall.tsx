@@ -16,7 +16,9 @@ export default function PaywallScreen() {
   const { data: profile } = useProfile();
   const {
     offerings,
-    isLoadingOfferings,
+    isOfferingsResolved,
+    isFetchingOfferings,
+    retryOfferings,
     purchaseAsync,
     isPurchasing,
     restore,
@@ -38,7 +40,6 @@ export default function PaywallScreen() {
   }, [trigger]);
 
   const annual = offerings?.current?.annual;
-  const annualPrice = annual?.product.priceString ?? '€9.99';
   const selectedPackage = annual ?? undefined;
 
   const handlePurchase = async () => {
@@ -152,9 +153,61 @@ export default function PaywallScreen() {
           <FeatureRow label={t('features.tagsAndFilters')} free="✓" premium="✓" />
         </View>
 
-        {/* Loading state */}
-        {isLoadingOfferings ? (
+        {/* Spinner while config + first fetch are still in flight; prevents
+            a one-render flash of the error UI on cold paywall mount. */}
+        {!isOfferingsResolved ? (
           <ActivityIndicator size="large" className="mt-10" color="#3B82F6" />
+        ) : !annual ? (
+          <>
+            {/* Offerings unavailable. Restore Purchases stays available so
+                existing premium users aren't locked out. */}
+            <View className="mt-8 items-center rounded-xl border border-gray-200 bg-gray-50 p-5">
+              <Text className="text-base font-bold text-gray-900">
+                {t('paywall.offeringsErrorTitle')}
+              </Text>
+              <Text className="mt-2 text-center text-sm text-gray-600">
+                {t('paywall.offeringsErrorMessage')}
+              </Text>
+            </View>
+
+            <Pressable
+              className={`mt-6 items-center rounded-xl py-4 ${
+                isFetchingOfferings ? 'bg-blue-400' : 'bg-blue-500 active:bg-blue-600'
+              }`}
+              onPress={async () => {
+                const result = await retryOfferings();
+                if (!result.ok) {
+                  Alert.alert(
+                    t('paywall.offeringsErrorTitle'),
+                    t('paywall.offeringsErrorMessage'),
+                  );
+                }
+              }}
+              disabled={isFetchingOfferings}
+            >
+              {isFetchingOfferings ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="text-base font-bold text-white">
+                  {t('paywall.tryAgain')}
+                </Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              className="mt-4 items-center py-2"
+              onPress={handleRestore}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : (
+                <Text className="text-sm text-gray-500 underline">
+                  {t('paywall.restorePurchases')}
+                </Text>
+              )}
+            </Pressable>
+          </>
         ) : (
           <>
             {/* Price display */}
@@ -166,7 +219,7 @@ export default function PaywallScreen() {
                 {t('paywall.yearly')}
               </Text>
               <Text className="mt-1 text-2xl font-bold text-blue-700">
-                {t('paywall.perYear', { price: annualPrice })}
+                {t('paywall.perYear', { price: annual.product.priceString })}
               </Text>
             </View>
 
@@ -176,7 +229,7 @@ export default function PaywallScreen() {
                 isPurchasing ? 'bg-blue-400' : 'bg-blue-500 active:bg-blue-600'
               }`}
               onPress={handlePurchase}
-              disabled={isPurchasing || !selectedPackage}
+              disabled={isPurchasing}
             >
               {isPurchasing ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />

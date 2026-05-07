@@ -114,7 +114,10 @@
     "noPurchasesTitle": "No se encontraron compras",
     "noPurchasesMessage": "No pudimos encontrar compras anteriores para restaurar.",
     "restoreErrorMessage": "Error al restaurar compras. Inténtalo de nuevo.",
-    "purchaseFallbackMessage": "Error en la compra. Inténtalo de nuevo."
+    "purchaseFallbackMessage": "Error en la compra. Inténtalo de nuevo.",
+    "offeringsErrorTitle": "Opciones de suscripción no disponibles",
+    "offeringsErrorMessage": "No pudimos cargar las opciones de suscripción ahora. Comprueba tu conexión e inténtalo de nuevo, o restaura una compra anterior.",
+    "tryAgain": "Reintentar"
   },
   "membership": {
     "title": "Membresía",
