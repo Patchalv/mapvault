@@ -56,6 +56,28 @@ function PostHogConnector({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AnalyticsProvider({ children }: { children: React.ReactNode }) {
+  if (!posthogApiKey) {
+    return <>{children}</>;
+  }
+  return (
+    <PostHogProvider
+      apiKey={posthogApiKey}
+      options={{
+        host: posthogHost,
+        enableSessionReplay: false,
+        captureAppLifecycleEvents: true,
+      }}
+      autocapture={{
+        captureScreens: true,
+        captureTouches: false,
+      }}
+    >
+      <PostHogConnector>{children}</PostHogConnector>
+    </PostHogProvider>
+  );
+}
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
@@ -111,28 +133,15 @@ export default Sentry.wrap(function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PostHogProvider
-        apiKey={posthogApiKey ?? ""}
-        options={{
-          host: posthogHost,
-          enableSessionReplay: false,
-          captureAppLifecycleEvents: true,
-        }}
-        autocapture={{
-          captureScreens: true,
-          captureTouches: false,
-        }}
-      >
-        <PostHogConnector>
-          <QueryClientProvider client={queryClient}>
-            <BottomSheetModalProvider>
-              <AuthGate>
-                <Slot />
-              </AuthGate>
-            </BottomSheetModalProvider>
-          </QueryClientProvider>
-        </PostHogConnector>
-      </PostHogProvider>
+      <AnalyticsProvider>
+        <QueryClientProvider client={queryClient}>
+          <BottomSheetModalProvider>
+            <AuthGate>
+              <Slot />
+            </AuthGate>
+          </BottomSheetModalProvider>
+        </QueryClientProvider>
+      </AnalyticsProvider>
     </GestureHandlerRootView>
   );
 });
