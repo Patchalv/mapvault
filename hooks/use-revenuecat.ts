@@ -150,6 +150,23 @@ export function useRevenueCat() {
     revenueCatReady,
   ]);
 
+  // PR #37's offerings-failure instrumentation only fires after the query has
+  // attempted to fetch. The missing-API-key path early-returns inside
+  // configureRevenueCat, so the query stays disabled, isFetched stays false,
+  // and the user sees the error UI with zero telemetry. This effect closes
+  // that gap — fires once per session when config was attempted but RC never
+  // became ready. Skipped in dev because RC is intentionally disabled there
+  // (.dev bundle ID, empty API keys) and would otherwise fire every session
+  // and pollute the production PostHog signal.
+  const notConfiguredReportedRef = useRef(false);
+  useEffect(() => {
+    if (__DEV__) return;
+    if (!configAttempted || revenueCatReady) return;
+    if (notConfiguredReportedRef.current) return;
+    notConfiguredReportedRef.current = true;
+    track('paywall_offerings_load_failed', { reason: 'not_configured' });
+  }, [configAttempted, revenueCatReady]);
+
   // "Try again" needs to also re-attempt configuration: refetch() on a
   // disabled query (revenueCatReady=false) is a no-op, so without this the
   // user-actionable error UI would silently do nothing in the missing-API-key
