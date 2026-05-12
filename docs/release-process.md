@@ -38,11 +38,13 @@ For changes that don't touch native code:
 
 ```bash
 # Preview channel (for testing)
-eas update --channel preview --message "Brief description of changes"
+eas update --branch preview --environment preview --message "Brief description of changes"
 
 # Production channel (live users)
-eas update --channel production --message "Brief description of changes"
+eas update --branch production --environment production --message "Brief description of changes"
 ```
+
+> **`--environment` is mandatory.** Without it, `eas update` does not load EAS-stored env vars and the OTA bundle ships with empty strings for every `EXPO_PUBLIC_*` value — silently breaking Sentry, PostHog, and RevenueCat. `app.config.ts` now uses `requireKey()` to fail loudly when this happens, but the rule still applies. Same for `--branch preview` / `--environment preview`.
 
 Updates are downloaded on next app launch. No App Store review required.
 
@@ -103,7 +105,7 @@ This reads git history and drafts user-facing "What's New" text suitable for App
 Push a new update that reverts the change:
 
 ```bash
-eas update --channel production --message "Revert: description"
+eas update --branch production --environment production --message "Revert: description"
 ```
 
 Or republish a previous update (check `eas update:list` for update IDs).
