@@ -25,7 +25,7 @@ PostHogProvider (app/_layout.tsx, outermost provider)
 
 ### How It Works
 
-1. **PostHogProvider** initializes the SDK with API key and EU host. Configured with lifecycle events and screen capture ON, touches and session replay OFF.
+1. **PostHogProvider** initializes the SDK with API key and EU host. Both values are read from `Constants.expoConfig?.extra.posthogApiKey` and `extra.posthogHost`, mapped from `EXPO_PUBLIC_POSTHOG_*` in `app.config.ts` via the `requireKey()` helper. Configured with lifecycle events and screen capture ON, touches and session replay OFF.
 2. **PostHogConnector** reads the SDK instance from React context via `usePostHog()` and passes it to the `setPostHogInstance()` singleton in `lib/analytics.ts`.
 3. **All tracking** goes through the `track()` function from `lib/analytics.ts`, which is type-safe against the `AnalyticsEvents` type.
 4. **User identity** is set via `identifyUser(userId)` in `use-auth.ts` whenever auth state changes. On sign-out, `resetUser()` creates a new anonymous ID.
@@ -44,10 +44,12 @@ PostHogProvider (app/_layout.tsx, outermost provider)
 
 | Variable | Purpose |
 |---|---|
-| `EXPO_PUBLIC_POSTHOG_API_KEY` | PostHog project API key (read at build time) |
-| `EXPO_PUBLIC_POSTHOG_HOST` | PostHog host URL (EU instance) |
+| `EXPO_PUBLIC_POSTHOG_API_KEY` | PostHog project API key; surfaced via `extra.posthogApiKey` in `app.config.ts` |
+| `EXPO_PUBLIC_POSTHOG_HOST` | PostHog host URL (EU instance); surfaced via `extra.posthogHost` |
 
-Both are set in `.env` and EAS secrets. They are `EXPO_PUBLIC_` prefixed so they're embedded at build time.
+Both are set in `.env` (local) and EAS env (`production` / `preview` environments). They are `EXPO_PUBLIC_` prefixed so they're embedded into the JS bundle.
+
+> **OTA gotcha:** `eas update` does not load EAS env vars unless invoked with `--environment production` (or `preview`). Without the flag, the bundle ships with empty strings and PostHog silently drops every event — this is one of the two telemetry blackouts memorialized in [the troubleshooting doc](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates). `requireKey()` in `app.config.ts` now throws when this happens so the OTA fails loudly rather than silently shipping broken.
 
 ## User Identification
 

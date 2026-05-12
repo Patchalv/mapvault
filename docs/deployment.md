@@ -142,11 +142,13 @@ Push JS-only changes without a full rebuild. OTA updates work when you haven't c
 
 ```bash
 # Preview channel
-eas update --channel preview --message "Description of changes"
+eas update --branch preview --environment preview --message "Description of changes"
 
 # Production channel
-eas update --channel production --message "Description of changes"
+eas update --branch production --environment production --message "Description of changes"
 ```
+
+> **`--environment` is required.** Without it, `eas update` does not load EAS-stored env vars and `EXPO_PUBLIC_*` values resolve to empty strings in the OTA bundle — silently disabling Sentry, PostHog, and RevenueCat. This caused the post-launch paywall outage and the ~5-week Sentry blackout. `app.config.ts` now uses `requireKey()` to throw when this happens, but always pass the flag explicitly.
 
 **When OTA works:** JS/TS code changes, style changes, asset changes (images, fonts).
 
