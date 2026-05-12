@@ -1,3 +1,3 @@
 export const FEATURE_FLAGS = {
-  reviewPromptsEnabled: false,
+  reviewPromptsEnabled: true,
 } as const;
