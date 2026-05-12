@@ -124,6 +124,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     sentryDsn: requireKey("EXPO_PUBLIC_SENTRY_DSN"),
+    posthogApiKey: requireKey("EXPO_PUBLIC_POSTHOG_API_KEY"),
+    posthogHost: requireKey("EXPO_PUBLIC_POSTHOG_HOST"),
     revenueCatAppleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_API_KEY"),
     revenueCatGoogleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY"),
     eas: {

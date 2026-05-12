@@ -21,6 +21,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 WebBrowser.maybeCompleteAuthSession();
 
 const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
+const posthogApiKey = Constants.expoConfig?.extra?.posthogApiKey as string | undefined;
+const posthogHost = Constants.expoConfig?.extra?.posthogHost as string | undefined;
 
 Sentry.init({
   dsn: sentryDsn,
@@ -110,9 +112,9 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PostHogProvider
-        apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY!}
+        apiKey={posthogApiKey ?? ""}
         options={{
-          host: process.env.EXPO_PUBLIC_POSTHOG_HOST!,
+          host: posthogHost,
           enableSessionReplay: false,
           captureAppLifecycleEvents: true,
         }}
