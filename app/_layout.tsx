@@ -22,8 +22,8 @@ WebBrowser.maybeCompleteAuthSession();
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN!,
   enabled: !__DEV__,
-  tracesSampleRate: 0.2,
-  replaysSessionSampleRate: 0.1,
+  tracesSampleRate: 1,
+  replaysSessionSampleRate: 1,
   replaysOnErrorSampleRate: 1,
   integrations: [Sentry.mobileReplayIntegration()],
   spotlight: __DEV__,
