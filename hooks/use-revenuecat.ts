@@ -155,9 +155,12 @@ export function useRevenueCat() {
   // configureRevenueCat, so the query stays disabled, isFetched stays false,
   // and the user sees the error UI with zero telemetry. This effect closes
   // that gap — fires once per session when config was attempted but RC never
-  // became ready.
+  // became ready. Skipped in dev because RC is intentionally disabled there
+  // (.dev bundle ID, empty API keys) and would otherwise fire every session
+  // and pollute the production PostHog signal.
   const notConfiguredReportedRef = useRef(false);
   useEffect(() => {
+    if (__DEV__) return;
     if (!configAttempted || revenueCatReady) return;
     if (notConfiguredReportedRef.current) return;
     notConfiguredReportedRef.current = true;
