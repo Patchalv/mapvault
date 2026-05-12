@@ -7,6 +7,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as Sentry from "@sentry/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import * as WebBrowser from 'expo-web-browser';
 import { useFonts } from "expo-font";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -19,9 +20,11 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 // link has been received, completing the pending auth session. No-op on iOS.
 WebBrowser.maybeCompleteAuthSession();
 
+const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
+
 Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN!,
-  enabled: !__DEV__,
+  dsn: sentryDsn,
+  enabled: !__DEV__ && !!sentryDsn,
   tracesSampleRate: 1,
   replaysSessionSampleRate: 1,
   replaysOnErrorSampleRate: 1,
