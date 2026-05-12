@@ -51,7 +51,7 @@ type AnalyticsEvents = {
   purchase_started: Record<string, never>;
   purchase_completed: Record<string, never>;
   purchase_failed: { reason: 'cancelled' | 'error' };
-  paywall_offerings_load_failed: { reason: 'error' | 'empty' };
+  paywall_offerings_load_failed: { reason: 'error' | 'empty' | 'not_configured' };
   review_prompted: { trigger: 'place_visited' | 'places_saved_milestone' | 'directions_after_filter' };
   settings_viewed: Record<string, never>;
   manage_maps_viewed: Record<string, never>;
