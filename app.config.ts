@@ -3,26 +3,16 @@ import { ConfigContext, ExpoConfig } from "expo/config";
 const IS_DEV = process.env.APP_VARIANT === "development";
 const IS_PREVIEW = process.env.APP_VARIANT === "preview";
 
-// Silent empty-string defaults previously masked a missing-key regression in an
-// OTA bundle (the keys are in EAS env but `eas update` didn't load them without
-// --environment production). Fail loudly so the bug surfaces at bundle time.
-// Static `process.env.FOO` reads (not dynamic `process.env[name]`) — Expo's
-// Metro performs dead-code elimination on static reads, and `expo/no-dynamic-env-var`
-// blocks the dynamic form.
-const REVENUECAT_APPLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-const REVENUECAT_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY;
-if (!IS_DEV) {
-  if (!REVENUECAT_APPLE_KEY) {
+const requireKey = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    if (IS_DEV) return "";
     throw new Error(
-      "EXPO_PUBLIC_REVENUECAT_API_KEY is required for non-development builds. If running `eas update`, pass `--environment production` (or `--environment preview`) so EAS Update loads env vars from that environment.",
+      `Missing required env var ${name}. For OTAs run \`eas update ... --environment production\`. For native builds ensure EAS Build env is configured.`,
     );
   }
-  if (!REVENUECAT_GOOGLE_KEY) {
-    throw new Error(
-      "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY is required for non-development builds. If running `eas update`, pass `--environment production` (or `--environment preview`) so EAS Update loads env vars from that environment.",
-    );
-  }
-}
+  return value;
+};
 
 const getBundleId = () => {
   if (IS_DEV) return "com.patrickalvarez.mapvault.dev";
@@ -133,8 +123,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   extra: {
-    revenueCatAppleApiKey: REVENUECAT_APPLE_KEY ?? "",
-    revenueCatGoogleApiKey: REVENUECAT_GOOGLE_KEY ?? "",
+    sentryDsn: requireKey("EXPO_PUBLIC_SENTRY_DSN"),
+    posthogApiKey: requireKey("EXPO_PUBLIC_POSTHOG_API_KEY"),
+    posthogHost: requireKey("EXPO_PUBLIC_POSTHOG_HOST"),
+    revenueCatAppleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_API_KEY"),
+    revenueCatGoogleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY"),
     eas: {
       projectId: "1ec7ed48-2f17-4c59-9e71-0f5aea7ea1f7",
     },

@@ -2,7 +2,7 @@
 
 ## Overview
 
-MapVault uses [Sentry](https://sentry.io) for crash reporting, performance monitoring, and session replay. The SDK is `@sentry/react-native` v8.x. The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
+MapVault uses [Sentry](https://sentry.io) for crash reporting, performance monitoring, and session replay. The SDK is `@sentry/react-native` v7.2.x (upgrade to v8.x tracked separately). The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
 
 Sentry is **disabled in development** and only runs in production builds.
 
@@ -44,20 +44,24 @@ Sentry.setUser() (hooks/use-auth.ts, on auth state change)
 The `Sentry.init()` call in `app/_layout.tsx`:
 
 ```typescript
+const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
+
 Sentry.init({
-  dsn: '...',
-  enabled: !__DEV__,           // Production only
-  tracesSampleRate: 1,         // 100% of transactions (launch phase)
-  replaysSessionSampleRate: 1, // 100% of sessions (launch phase)
-  replaysOnErrorSampleRate: 1,   // 100% of error sessions
+  dsn: sentryDsn,
+  enabled: !__DEV__ && !!sentryDsn, // Production only, and only when DSN is present
+  tracesSampleRate: 1,              // 100% of transactions (launch phase)
+  replaysSessionSampleRate: 1,      // 100% of sessions (launch phase)
+  replaysOnErrorSampleRate: 1,      // 100% of error sessions
   integrations: [Sentry.mobileReplayIntegration()],
-  spotlight: __DEV__,           // Local Sentry dev UI
+  spotlight: __DEV__,               // Local Sentry dev UI
 });
 ```
 
+The DSN is **read from `Constants.expoConfig?.extra?.sentryDsn`**, not directly from `process.env`. The mapping from `EXPO_PUBLIC_SENTRY_DSN` → `extra.sentryDsn` happens in `app.config.ts` via a `requireKey()` helper that throws if the env var is missing in a non-dev build. This is a deliberate guardrail against the OTA failure mode where `eas update` without `--environment production` would silently bake empty strings into the bundle and disable Sentry. See [Why telemetry can silently disappear in OTAs](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
+
 | Setting | Value | Rationale |
 |---|---|---|
-| `enabled` | `!__DEV__` | Dev errors create noise — only production matters |
+| `enabled` | `!__DEV__ && !!sentryDsn` | Dev errors create noise; the DSN check makes the no-telemetry path explicit instead of relying on the SDK's silent-on-falsy-DSN behavior |
 | `tracesSampleRate` | `1` | 100% sampling during launch phase for maximum visibility; dial back to `0.2` as user volume grows |
 | `replaysSessionSampleRate` | `1` | 100% sampling during launch phase; dial back to `0.1` as user volume grows |
 | `replaysOnErrorSampleRate` | `1` | Always capture replay when an error occurs |
@@ -77,9 +81,12 @@ This means every Sentry error event includes the user ID and email, making it ea
 
 | Variable | Purpose | Where Set |
 |---|---|---|
+| `EXPO_PUBLIC_SENTRY_DSN` | Client DSN; surfaced via `extra.sentryDsn` in `app.config.ts` and read at runtime from `Constants.expoConfig?.extra` | `.env` (local), EAS env (`production` / `preview` environments) |
 | `SENTRY_AUTH_TOKEN` | Auth token for source map uploads during EAS builds | `.env` (local), EAS Secrets (CI) |
 
-The DSN is hardcoded in `app/_layout.tsx`. Sentry DSNs are ingest-only and safe to commit.
+The DSN is ingest-only and safe to commit, but it must still be passed via the right delivery path:
+- **Native builds (`eas build`):** EAS Build loads the env automatically.
+- **OTA updates (`eas update`):** You **must** pass `--environment production` (or `preview`) or the bundle ships with an empty DSN and Sentry is disabled silently. `requireKey()` in `app.config.ts` will throw to surface this — do not work around it.
 
 ## Development: Spotlight
 

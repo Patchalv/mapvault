@@ -38,7 +38,11 @@ cp .env.example .env
 | `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY_ANDROID` | Same — separate key restricted to Android package name + SHA-1 |
 | `EXPO_PUBLIC_POSTHOG_API_KEY` | [PostHog](https://eu.posthog.com/) → Project Settings → Project API Key |
 | `EXPO_PUBLIC_POSTHOG_HOST` | `https://eu.i.posthog.com` (EU instance, hardcoded) |
+| `EXPO_PUBLIC_SENTRY_DSN` | [Sentry](https://patrick-alvarez.sentry.io/) → MapVault project → Client Keys (DSN). Ingest-only, safe to share. |
 | `EXPO_PUBLIC_REVENUECAT_API_KEY` | [RevenueCat Dashboard](https://app.revenuecat.com/) → Project → API Keys → Apple public key |
+| `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` | Same dashboard → Google Play public key |
+
+> All `EXPO_PUBLIC_*` values are surfaced via `app.config.ts` → `extra` and read at runtime through `Constants.expoConfig?.extra`. The `requireKey()` helper in `app.config.ts` throws if any required var is missing outside dev — including during `eas update` runs invoked without `--environment production`. See [docs/troubleshooting.md](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
 
 ## Supabase
 

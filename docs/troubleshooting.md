@@ -162,15 +162,49 @@ Not `npm run start:dev`.
 eas build --profile development:simulator --platform ios
 ```
 
+## OTA Updates & Telemetry
+
+### Why telemetry can silently disappear in OTA updates
+
+**Symptom:** Sentry, PostHog, and/or RevenueCat go quiet after an OTA. No errors, no crashes — just no events arriving from the deployed bundle.
+
+**Cause:** `eas update --branch production` does **not** load EAS-stored env vars unless invoked with `--environment production` (same for `preview`). Without the flag, every `process.env.EXPO_PUBLIC_*` resolves to `undefined` at bundle-evaluation time, and `app.config.ts` substitutes whatever fallback it has. Historically that was `?? ""`, which inlined empty strings everywhere and silently disabled every SDK that read them.
+
+This has happened twice:
+- **2026-03-27 → 2026-05-04+:** Sentry ingested zero production events for ~5 weeks because the latest OTA bundle shipped with an empty DSN. The launch outage that paged on the paywall (RevenueCat keys empty) shared the same root cause; PostHog also went dark in that window, which is part of why it took hours to spot.
+
+**Guardrail:** `app.config.ts` now uses a `requireKey()` helper that throws when an `EXPO_PUBLIC_*` var is missing outside `IS_DEV`. So an `eas update` invoked without `--environment production` will now **fail loudly** instead of silently shipping a broken bundle. The fix is always to add the flag, never to weaken the guardrail.
+
+**Always run:**
+
+```bash
+eas update --branch production --environment production --message "..."
+eas update --branch preview    --environment preview    --message "..."
+```
+
+**Verify after shipping:**
+
+```bash
+curl -s -H "expo-runtime-version: exposdk:54.0.0" \
+  -H "expo-channel-name: production" \
+  -H "expo-platform: ios" \
+  -H "expo-protocol-version: 1" \
+  -H "accept: multipart/mixed,application/expo+json" \
+  "https://u.expo.dev/1ec7ed48-2f17-4c59-9e71-0f5aea7ea1f7"
+```
+
+The response's `extra.expoClient.extra.sentryDsn` (and `posthogApiKey`, `revenueCatAppleApiKey`, etc.) must be non-empty.
+
 ## Analytics (PostHog)
 
 ### Events Silently Dropped
 
 **Symptom:** PostHog dashboard shows no events, but no errors in console.
 
-**Cause:** If PostHog isn't initialized when an event fires, the event is silently dropped (not queued).
+**Cause:** If PostHog isn't initialized when an event fires, the event is silently dropped (not queued). The most common reason is the OTA env-var bug above; check that first.
 
 **Check:**
-- `EXPO_PUBLIC_POSTHOG_API_KEY` and `EXPO_PUBLIC_POSTHOG_HOST` are set in `.env`
+- `EXPO_PUBLIC_POSTHOG_API_KEY` and `EXPO_PUBLIC_POSTHOG_HOST` are set in `.env` (and in EAS env for `production` / `preview`).
+- The most recent OTA was deployed with `--environment production` (see [Why telemetry can silently disappear in OTA updates](#why-telemetry-can-silently-disappear-in-ota-updates)).
 - In dev mode, look for: `[Analytics] PostHog not initialized, dropping event: <name>`
-- Events during app startup may be lost if PostHog hasn't finished initializing
+- Events during app startup may be lost if PostHog hasn't finished initializing.
