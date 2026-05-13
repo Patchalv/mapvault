@@ -141,38 +141,47 @@ Consider if you need a new native build instead.
 
 ### 3. Environment Variables Check
 
-**CRITICAL:** EAS Updates bundle JavaScript, including any `EXPO_PUBLIC_*` variables at build time.
+**CRITICAL:** EAS Updates bundle JavaScript, including any `EXPO_PUBLIC_*` variables at build time. Missing SDK keys in OTA bundles silently break purchases, analytics, and error tracking for every user who receives the update.
 
-**Scan for sensitive data:**
+**ALWAYS use `--environment production` for production channel updates.** Without it, EAS injects empty strings for all `EXPO_PUBLIC_*` vars, and the RC/Sentry/PostHog SDKs silently fail to initialize. This caused a production paywall outage on 2026-05-12 (OTA bundle `019e1be8`).
 
-```typescript
-// Check for EXPO_PUBLIC_ variables in .env files
-Grep({ pattern: "EXPO_PUBLIC_", glob: ".env*" });
+**Validate required SDK keys are non-empty in the EAS environment:**
 
-// Check what's currently in the environment
-Bash({ command: "env | grep EXPO_PUBLIC_ || echo 'No EXPO_PUBLIC_ vars set'" });
+```bash
+# Verify required keys are configured in EAS production environment
+eas env:list --environment production
 ```
 
-**Validate:**
+**Required keys that MUST be present and non-empty for production OTAs:**
 
-- [ ] No API keys in `EXPO_PUBLIC_` variables
-- [ ] No authentication secrets exposed
-- [ ] Environment URLs are correct for target channel
-- [ ] `.env.local` is gitignored (won't affect EAS builds)
+- [ ] `EXPO_PUBLIC_REVENUECAT_API_KEY` — RC iOS key; empty = paywall broken for all users
+- [ ] `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` — RC Android key
+- [ ] `EXPO_PUBLIC_SENTRY_DSN` — empty = silent error tracking blackout
+- [ ] `EXPO_PUBLIC_POSTHOG_API_KEY` — empty = silent analytics blackout
+- [ ] `EXPO_PUBLIC_POSTHOG_HOST` — PostHog ingest URL
 
-**Warning for potential leaks:**
+**If any key is missing from the EAS environment:**
 
 ```
-⚠️  ENVIRONMENT VARIABLE CHECK
+🚫 MISSING REQUIRED SDK KEY
 ------------------------------------------
-Found EXPO_PUBLIC_ variables:
-- EXPO_PUBLIC_API_URL: https://api.staging.example.com
+EXPO_PUBLIC_REVENUECAT_API_KEY is not set in the EAS production environment.
 
-Ensure these are correct for the target channel (production).
+Publishing this OTA will break purchases for all users who receive it.
 
-Remember: EXPO_PUBLIC_ variables are bundled into the JavaScript
-and visible to anyone who decompiles your app.
+Fix: add the key via EAS dashboard or:
+  eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_API_KEY --value <key>
+
+Do NOT publish until all required keys are confirmed present.
 ```
+
+**Warn if local EXPO_PUBLIC_ vars are set (they must NOT leak into OTA bundles):**
+
+```bash
+env | grep EXPO_PUBLIC_ || echo 'No local EXPO_PUBLIC_ vars (good)'
+```
+
+If local vars are set, they will override EAS environment vars during `eas update` unless `--environment production` is passed. The `--environment production` flag forces EAS to use only its stored secrets and ignore local overrides.
 
 ### 4. Channel/Branch Configuration
 
@@ -294,8 +303,10 @@ Date: {date}
 
 🔐 ENVIRONMENT VARIABLES
 ------------------------------------------
-✅ No sensitive data in EXPO_PUBLIC_ variables
-✅ API URLs correct for {channel}
+✅ EXPO_PUBLIC_REVENUECAT_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_SENTRY_DSN present in EAS production env
+✅ EXPO_PUBLIC_POSTHOG_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_POSTHOG_HOST present in EAS production env
 ⚠️  Found {n} console.log statements (consider removing)
 
 📦 BUNDLE SIZE
@@ -316,7 +327,7 @@ Date: {date}
 
 Run this command to publish the update:
 
-eas update --branch {branch} --message "{message}"
+eas update --channel production --environment production --message "{message}"
 
 ============================================
 ```
@@ -325,28 +336,28 @@ eas update --branch {branch} --message "{message}"
 
 Based on validated parameters:
 
-**Standard update:**
+**Production update (ALWAYS include `--environment production`):**
 
 ```bash
-eas update --branch {branch} --message "{message}"
+eas update --channel production --environment production --message "{message}"
 ```
 
-**With channel (auto-selects branch):**
+**Preview update:**
 
 ```bash
-eas update --channel {channel} --message "{message}"
+eas update --channel preview --message "{message}"
 ```
 
-**Platform-specific update:**
+**Platform-specific production update:**
 
 ```bash
-eas update --branch {branch} --platform ios --message "{message}"
+eas update --channel production --environment production --platform ios --message "{message}"
 ```
 
-**With explicit runtime version:**
+**Development update:**
 
 ```bash
-eas update --branch {branch} --message "{message}"
+eas update --channel development --message "{message}"
 ```
 
 ## Handling Issues
@@ -466,7 +477,8 @@ Before publishing:
 
 - [ ] Tested changes locally with `npx expo start`
 - [ ] Verified on physical device (not just simulator)
-- [ ] Confirmed environment variables are correct
+- [ ] Confirmed all required SDK keys are present in EAS environment (`eas env:list --environment production`)
+- [ ] Using `--environment production` flag for production channel updates
 - [ ] Checked bundle size is reasonable
 - [ ] Prepared rollback plan
 - [ ] Communicated to team (if production)
@@ -474,11 +486,11 @@ Before publishing:
 ## Quick Reference
 
 ```bash
-# Publish update to production
-eas update --branch production --message "Bug fixes and improvements"
+# Publish update to production (--environment production is REQUIRED)
+eas update --channel production --environment production --message "Bug fixes and improvements"
 
 # Publish to preview for testing
-eas update --branch preview --message "Testing new feature X"
+eas update --channel preview --message "Testing new feature X"
 
 # List updates on a branch
 eas update:list --branch production
