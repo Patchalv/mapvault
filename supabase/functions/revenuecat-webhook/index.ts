@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as Sentry from "npm:@sentry/node";
+
+Sentry.init({
+  dsn: Deno.env.get("SENTRY_DSN"),
+  tracesSampleRate: 0,
+});
 
 const GRANT_EVENTS = new Set([
   "INITIAL_PURCHASE",
@@ -18,6 +24,18 @@ serve(async (req) => {
     const webhookSecret = Deno.env.get("REVENUECAT_WEBHOOK_SECRET");
 
     if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
+      const reason = !webhookSecret ? "missing_secret" : "mismatch";
+      const headerPrefix = authHeader?.slice(0, 20) ?? null;
+      console.error("revenuecat-webhook auth fail", {
+        reason,
+        hasHeader: !!authHeader,
+        headerPrefix,
+      });
+      Sentry.captureMessage("revenuecat_webhook_auth_fail", {
+        level: "error",
+        tags: { function: "revenuecat-webhook", reason },
+        extra: { headerPrefix, hasHeader: !!authHeader },
+      });
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {
@@ -78,16 +96,43 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from("profiles")
       .update({ entitlement })
-      .eq("id", app_user_id);
+      .eq("id", app_user_id)
+      .select("id");
 
     if (updateError) {
+      console.error("revenuecat-webhook profile update failed", {
+        app_user_id,
+        event_type: type,
+        error: updateError.message,
+      });
       return new Response(
         JSON.stringify({ error: "Failed to update profile entitlement" }),
         {
           status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      console.error("revenuecat-webhook user not found", {
+        app_user_id,
+        event_type: type,
+      });
+      Sentry.captureMessage("revenuecat_webhook_user_not_found", {
+        level: "warning",
+        tags: { function: "revenuecat-webhook", event_type: type },
+        extra: { app_user_id, entitlement },
+      });
+      return new Response(
+        JSON.stringify({
+          error: `No profile found for app_user_id ${app_user_id}`,
+        }),
+        {
+          status: 404,
           headers: { "Content-Type": "application/json" },
         },
       );
@@ -154,6 +199,9 @@ serve(async (req) => {
     );
   } catch (err) {
     console.error("revenuecat-webhook error:", err);
+    Sentry.captureException(err, {
+      tags: { function: "revenuecat-webhook" },
+    });
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       {
