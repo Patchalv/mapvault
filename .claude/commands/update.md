@@ -1,6 +1,6 @@
 ---
 name: update
-description: Prepare for EAS Update (OTA) - validates channels, config, and ensures no local env vars leak
+description: Prepare for EAS Update (OTA) - validates channels, config, and confirms required SDK keys are present in EAS production environment
 argument-hint: '[channel] [--message "..."]'
 model: sonnet
 ---
@@ -141,38 +141,54 @@ Consider if you need a new native build instead.
 
 ### 3. Environment Variables Check
 
-**CRITICAL:** EAS Updates bundle JavaScript, including any `EXPO_PUBLIC_*` variables at build time.
+**CRITICAL:** EAS Updates bundle JavaScript, including any `EXPO_PUBLIC_*` variables at build time. Missing SDK keys in OTA bundles silently break purchases, analytics, and error tracking for every user who receives the update.
 
-**Scan for sensitive data:**
+**ALWAYS use `--environment production` for production channel updates.** Without it, EAS injects empty strings for all `EXPO_PUBLIC_*` vars, and the RC/Sentry/PostHog SDKs silently fail to initialize. This caused a production paywall outage on 2026-05-12 (OTA bundle `019e1be8`).
 
-```typescript
-// Check for EXPO_PUBLIC_ variables in .env files
-Grep({ pattern: "EXPO_PUBLIC_", glob: ".env*" });
+**Validate required SDK keys are present in the EAS environment:**
 
-// Check what's currently in the environment
-Bash({ command: "env | grep EXPO_PUBLIC_ || echo 'No EXPO_PUBLIC_ vars set'" });
+```bash
+# Verify required keys are configured in EAS production environment
+eas env:list --environment production
 ```
 
-**Validate:**
+> **Note:** `eas env:list` confirms presence but masks values. It cannot detect an empty stored value. If you recently rotated keys, verify the actual value is populated via the EAS dashboard before publishing.
 
-- [ ] No API keys in `EXPO_PUBLIC_` variables
-- [ ] No authentication secrets exposed
-- [ ] Environment URLs are correct for target channel
-- [ ] `.env.local` is gitignored (won't affect EAS builds)
+**Required keys that MUST be present and non-empty for production OTAs:**
 
-**Warning for potential leaks:**
+- [ ] `EXPO_PUBLIC_REVENUECAT_API_KEY` — RC iOS key; empty = paywall broken for all users
+- [ ] `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` — RC Android key
+- [ ] `EXPO_PUBLIC_SENTRY_DSN` — empty = silent error tracking blackout
+- [ ] `EXPO_PUBLIC_POSTHOG_API_KEY` — empty = silent analytics blackout
+- [ ] `EXPO_PUBLIC_POSTHOG_HOST` — PostHog ingest URL
 
-```
-⚠️  ENVIRONMENT VARIABLE CHECK
+**If any key is missing from the EAS environment:**
+
+```text
+🚫 MISSING REQUIRED SDK KEY
 ------------------------------------------
-Found EXPO_PUBLIC_ variables:
-- EXPO_PUBLIC_API_URL: https://api.staging.example.com
+{MISSING_KEY} is not set in the EAS production environment.
 
-Ensure these are correct for the target channel (production).
+Impact:
+  EXPO_PUBLIC_REVENUECAT_API_KEY   → purchases broken for all users
+  EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY → Android purchases broken
+  EXPO_PUBLIC_SENTRY_DSN           → silent error tracking blackout
+  EXPO_PUBLIC_POSTHOG_API_KEY      → silent analytics blackout
+  EXPO_PUBLIC_POSTHOG_HOST         → silent analytics blackout
 
-Remember: EXPO_PUBLIC_ variables are bundled into the JavaScript
-and visible to anyone who decompiles your app.
+Fix: add the key via EAS dashboard or:
+  eas env:create --environment production --name {MISSING_KEY} --value <value>
+
+Do NOT publish until all required keys are confirmed present.
 ```
+
+**Warn if local EXPO_PUBLIC_ vars are set (they must NOT leak into OTA bundles):**
+
+```bash
+env | grep EXPO_PUBLIC_ || echo 'No local EXPO_PUBLIC_ vars (good)'
+```
+
+If local vars are set, verify they match the EAS-stored values or unset them before publishing. The `--environment production` flag instructs EAS to inject its stored secrets into the bundle — it does not suppress local shell vars, so conflicting local values may still be present. When in doubt, open a clean shell with no `.env` sourced and re-run.
 
 ### 4. Channel/Branch Configuration
 
@@ -294,8 +310,11 @@ Date: {date}
 
 🔐 ENVIRONMENT VARIABLES
 ------------------------------------------
-✅ No sensitive data in EXPO_PUBLIC_ variables
-✅ API URLs correct for {channel}
+✅ EXPO_PUBLIC_REVENUECAT_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_SENTRY_DSN present in EAS production env
+✅ EXPO_PUBLIC_POSTHOG_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_POSTHOG_HOST present in EAS production env
 ⚠️  Found {n} console.log statements (consider removing)
 
 📦 BUNDLE SIZE
@@ -316,7 +335,7 @@ Date: {date}
 
 Run this command to publish the update:
 
-eas update --branch {branch} --message "{message}"
+eas update --channel production --environment production --message "{message}"
 
 ============================================
 ```
@@ -325,28 +344,28 @@ eas update --branch {branch} --message "{message}"
 
 Based on validated parameters:
 
-**Standard update:**
+**Production update (ALWAYS include `--environment production`):**
 
 ```bash
-eas update --branch {branch} --message "{message}"
+eas update --channel production --environment production --message "{message}"
 ```
 
-**With channel (auto-selects branch):**
+**Preview update:**
 
 ```bash
-eas update --channel {channel} --message "{message}"
+eas update --channel preview --message "{message}"
 ```
 
-**Platform-specific update:**
+**Platform-specific production update:**
 
 ```bash
-eas update --branch {branch} --platform ios --message "{message}"
+eas update --channel production --environment production --platform ios --message "{message}"
 ```
 
-**With explicit runtime version:**
+**Development update:**
 
 ```bash
-eas update --branch {branch} --message "{message}"
+eas update --channel development --message "{message}"
 ```
 
 ## Handling Issues
@@ -441,8 +460,8 @@ If an update causes issues:
 # List recent updates on branch
 eas update:list --branch production --limit 10
 
-# Roll back by republishing previous update
-eas update:republish --group {previous-update-group-id}
+# Roll back by republishing previous update (production requires --environment production)
+eas update:republish --group {previous-update-group-id} --environment production
 ```
 
 **Include in output:**
@@ -453,11 +472,11 @@ eas update:republish --group {previous-update-group-id}
 If this update causes issues, roll back with:
 
   eas update:list --branch {branch} --limit 10
-  eas update:republish --group {previous-group-id}
+  eas update:republish --group {previous-group-id} --environment production
 
-Or publish a new fix:
+Or publish a new fix (production ALWAYS requires --environment production):
 
-  eas update --branch {branch} --message "Hotfix: ..."
+  eas update --channel production --environment production --message "Hotfix: ..."
 ```
 
 ## Best Practices Checklist
@@ -466,7 +485,8 @@ Before publishing:
 
 - [ ] Tested changes locally with `npx expo start`
 - [ ] Verified on physical device (not just simulator)
-- [ ] Confirmed environment variables are correct
+- [ ] Confirmed all required SDK keys are present in EAS environment (`eas env:list --environment production`)
+- [ ] Using `--environment production` flag for production channel updates
 - [ ] Checked bundle size is reasonable
 - [ ] Prepared rollback plan
 - [ ] Communicated to team (if production)
@@ -474,11 +494,11 @@ Before publishing:
 ## Quick Reference
 
 ```bash
-# Publish update to production
-eas update --branch production --message "Bug fixes and improvements"
+# Publish update to production (--environment production is REQUIRED)
+eas update --channel production --environment production --message "Bug fixes and improvements"
 
 # Publish to preview for testing
-eas update --branch preview --message "Testing new feature X"
+eas update --channel preview --message "Testing new feature X"
 
 # List updates on a branch
 eas update:list --branch production
@@ -486,8 +506,8 @@ eas update:list --branch production
 # View update details
 eas update:view {group-id}
 
-# Republish (rollback to) previous update
-eas update:republish --group {previous-group-id}
+# Republish (rollback to) previous update (production requires --environment production)
+eas update:republish --group {previous-group-id} --environment production
 
 # Delete an update (cannot undo distribution)
 eas update:delete --group {group-id}
