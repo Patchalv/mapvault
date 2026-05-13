@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # MapVault
 
 A mobile app for saving and rediscovering place recommendations in cities.
@@ -7,8 +11,8 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 
 - `npm run start:dev` — Start dev server (development variant, `.dev` bundle ID)
 - `npx expo start --dev-client` — Start dev server (production bundle ID, for payments testing)
-- `npx expo lint` — Run linter
-- `npx tsc --noEmit` — TypeScript check (run after code changes)
+- `npm run lint` — Run linter
+- `npm run typecheck` — TypeScript check (run after code changes)
 - `eas build --profile <name> --platform ios` — Build for iOS (see `docs/builds.md` for profiles)
 - `supabase db push` — Push migration to Supabase
 - `supabase functions deploy <name> --no-verify-jwt` — Deploy Edge Function to Supabase
@@ -54,6 +58,7 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - Use `enabled` option for dependent queries (e.g., `enabled: !!mapId`)
 - Mutations: invalidate related queries in `onSuccess`
 - Edge Function calls: `supabase.functions.invoke('fn-name', { body: {...} })`
+- Global defaults: `staleTime: 5 minutes`, `retry: 1` — set in the root `QueryClient` in `app/_layout.tsx`
 
 ## Navigation (Expo Router)
 
@@ -64,6 +69,23 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - iOS: `associatedDomains` in `app.config.ts`; Android: `intentFilters` in `app.config.ts`
 - Tab layout: `(tabs)/` with three tabs: explore, add, profile
 - Auth routing: `(auth)/` group for unauthenticated screens
+
+## Analytics
+
+- Use `track()`, `identifyUser()`, `resetUser()`, `updateUserProperties()` from `lib/analytics.ts` — never call PostHog directly
+- The PostHog instance is injected at runtime via `PostHogConnector` in `app/_layout.tsx`; events fired before init are silently dropped (warned in `__DEV__`)
+- See `docs/analytics.md` for the full event catalog and instrumentation guide
+
+## Feature Flags
+
+- Feature flags are defined in `lib/feature-flags.ts` as the `FEATURE_FLAGS` object
+- Check `FEATURE_FLAGS.featureName` to gate behavior; add or toggle flags in that file
+
+## Environment Variables
+
+- `APP_VARIANT` in `eas.json` controls the build variant (`development` / `preview` / `production`) — determines bundle ID, app name, and whether services like Sentry initialize
+- Adding a new env var: declare it in `eas.json` per profile → read it **statically** (not dynamically) in `app.config.ts` (required for Metro dead-code elimination; see `expo/no-dynamic-env-var` rule) → expose it via `extra` → access at runtime as `Constants.expoConfig?.extra?.varName`
+- `__DEV__` is true only in dev clients; `EAS_BUILD` is set only during native builds (not `eas update`)
 
 ## File Structure
 
@@ -76,7 +98,7 @@ profile/ ← Profile & map management
 invite/[token].tsx ← Universal Link / deep link handler
 components/ ← Shared UI components
 hooks/ ← Custom hooks (data fetching, auth, etc.)
-lib/ ← Utilities (supabase client, constants)
+lib/ ← Utilities (supabase client, analytics, feature-flags, constants)
 types/ ← TypeScript type definitions
 supabase/
 migrations/ ← SQL migrations
@@ -105,9 +127,10 @@ functions/ ← Edge Functions
 
 ## IMPORTANT
 
-- Always run `npx tsc --noEmit` after making TypeScript changes
+- Always run `npm run typecheck` after making TypeScript changes
 - The tsc hook runs after every .ts/.tsx edit. During multi-file changes,
   intermediate type errors are expected — continue editing before fixing them.
+- Pre-commit hook (husky) runs `npm run lint`, `npm run typecheck`, and `npm run check:i18n` before every commit
 - Never hardcode API keys. Use environment variables via `.env`
 - Mapbox tokens go in `app.json` under `plugins`
 - Google Places API key must be restricted in Google Cloud Console
@@ -124,14 +147,20 @@ functions/ ← Edge Functions
 
 - `docs/prd.md` — Product requirements (what and why)
 - `docs/technical-plan.md` — Technical plan (how to build it)
-- `docs/payments.md` — Payments system, RevenueCat, and testing guide
+- `docs/setup.md` — Initial project setup and local environment
 - `docs/builds.md` — EAS build profiles and variants
+- `docs/release-process.md` — Version bumping and App Store submission
+- `docs/deployment.md` — OTA and native deployment guide
+- `docs/payments.md` — Payments system, RevenueCat, and testing guide
 - `docs/analytics.md` — PostHog analytics events and instrumentation guide
 - `docs/sentry.md` — Sentry error tracking, config, and MCP tools guide
+- `docs/database.md` — Full database schema reference
+- `docs/edge-functions.md` — Edge Functions patterns and catalog
 - `docs/app-reviews.md` — In-app review prompts, triggers, and feature flag
 - `docs/universal-links-website.md` — AASA, assetlinks.json, and invite fallback page specs for mapvault.app
 - `docs/freemium-roles.md` — Freemium tiers, three-role system, and permission matrices
 - `docs/mailerlite.md` — MailerLite integration: sync paths, groups, backfill script, error handling
+- `docs/troubleshooting.md` — Common issues and fixes
 - Read these before starting any new milestone
 
 ## i18n (Localization)

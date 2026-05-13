@@ -110,7 +110,7 @@ export default function MapInvitesScreen() {
         onError: () => Alert.alert(t('common.error'), t('mapInvites.createError')),
       });
     },
-    [createInvite]
+    [createInvite, t]
   );
 
   const handleCopy = useCallback(
