@@ -92,8 +92,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !inAuthGroup) {
       // Store invite deep link before redirecting to sign-in
-      if (inInviteRoute && segments[1]) {
-        pendingDeepLink.current = `/invite/${segments[1]}`;
+      const segs = segments as string[];
+      if (inInviteRoute && segs[1]) {
+        pendingDeepLink.current = `/invite/${segs[1]}`;
       }
       router.replace("/(auth)/sign-in");
     } else if (isAuthenticated && inAuthGroup) {
