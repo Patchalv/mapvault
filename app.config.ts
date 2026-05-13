@@ -3,29 +3,54 @@ import { ConfigContext, ExpoConfig } from "expo/config";
 const IS_DEV = process.env.APP_VARIANT === "development";
 const IS_PREVIEW = process.env.APP_VARIANT === "preview";
 
-const requireKey = (name: string): string => {
-  const value = process.env[name];
-  if (!value) {
-    // Development builds skip key validation — local dev doesn't need SDK keys.
-    if (IS_DEV) return "";
-    // IS_PREVIEW is intentionally NOT exempt here — preview native builds
-    // (APP_VARIANT=preview) must also fail fast when SDK keys are missing.
-    //
-    // EAS_BUILD=true is set explicitly in eas.json for the preview and
-    // production build profiles. During `eas update`, this config is evaluated
-    // locally before EAS injects env vars, so EAS_BUILD is never set then.
-    // WARNING: running `eas update` WITHOUT --environment [env] means EAS will
-    // not inject the real values at bundle time either — the "" will ship. The
-    // /update skill's pre-flight checklist is the only safeguard for that case.
-    if (process.env.EAS_BUILD === "true") {
-      throw new Error(
-        `Missing required env var ${name}. Ensure EAS Build env is configured for this profile.`,
-      );
-    }
-    return "";
+// Static env reads — required by `expo/no-dynamic-env-var` so Expo Metro can
+// statically eliminate dead `process.env.FOO` references at bundle time. Do
+// not refactor back into a helper that takes the name as a string; the
+// dynamic bracket form defeats that optimization.
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
+const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST;
+const REVENUECAT_APPLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+const REVENUECAT_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY;
+
+// Fail-fast guard for native builds. IS_PREVIEW is intentionally NOT exempt —
+// preview native builds (APP_VARIANT=preview) must also fail fast when SDK
+// keys are missing.
+//
+// EAS_BUILD=true is set explicitly in eas.json for the preview and production
+// build profiles. During `eas update`, this config is evaluated locally
+// before EAS injects env vars, so EAS_BUILD is never set then — we must not
+// throw, or `eas update` cannot read the config.
+// WARNING: running `eas update` WITHOUT --environment [env] means EAS will
+// not inject the real values at bundle time either — the "" will ship. The
+// /update skill's pre-flight checklist is the only safeguard for that case.
+if (process.env.EAS_BUILD === "true") {
+  if (!SENTRY_DSN) {
+    throw new Error(
+      "Missing required env var EXPO_PUBLIC_SENTRY_DSN. Ensure EAS Build env is configured for this profile.",
+    );
   }
-  return value;
-};
+  if (!POSTHOG_API_KEY) {
+    throw new Error(
+      "Missing required env var EXPO_PUBLIC_POSTHOG_API_KEY. Ensure EAS Build env is configured for this profile.",
+    );
+  }
+  if (!POSTHOG_HOST) {
+    throw new Error(
+      "Missing required env var EXPO_PUBLIC_POSTHOG_HOST. Ensure EAS Build env is configured for this profile.",
+    );
+  }
+  if (!REVENUECAT_APPLE_KEY) {
+    throw new Error(
+      "Missing required env var EXPO_PUBLIC_REVENUECAT_API_KEY. Ensure EAS Build env is configured for this profile.",
+    );
+  }
+  if (!REVENUECAT_GOOGLE_KEY) {
+    throw new Error(
+      "Missing required env var EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY. Ensure EAS Build env is configured for this profile.",
+    );
+  }
+}
 
 const getBundleId = () => {
   if (IS_DEV) return "com.patrickalvarez.mapvault.dev";
@@ -136,11 +161,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   extra: {
-    sentryDsn: requireKey("EXPO_PUBLIC_SENTRY_DSN"),
-    posthogApiKey: requireKey("EXPO_PUBLIC_POSTHOG_API_KEY"),
-    posthogHost: requireKey("EXPO_PUBLIC_POSTHOG_HOST"),
-    revenueCatAppleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_API_KEY"),
-    revenueCatGoogleApiKey: requireKey("EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY"),
+    sentryDsn: SENTRY_DSN ?? "",
+    posthogApiKey: POSTHOG_API_KEY ?? "",
+    posthogHost: POSTHOG_HOST ?? "",
+    revenueCatAppleApiKey: REVENUECAT_APPLE_KEY ?? "",
+    revenueCatGoogleApiKey: REVENUECAT_GOOGLE_KEY ?? "",
     eas: {
       projectId: "1ec7ed48-2f17-4c59-9e71-0f5aea7ea1f7",
     },
