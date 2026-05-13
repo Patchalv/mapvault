@@ -129,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@sentry/react-native/expo",
       {
-        url: "https://sentry.io/",
+        url: "https://de.sentry.io/",
         project: "mapvault",
         organization: "patrick-alvarez",
       },
