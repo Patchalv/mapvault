@@ -87,7 +87,10 @@ serve(async (req) => {
 
     try {
       const projectId = Deno.env.get("REVENUECAT_PROJECT_ID");
-      const rcKey = Deno.env.get("REVENUECAT_SECRET_API_KEY");
+      // RC v2 endpoints (list-customers, list-entitlements) require a
+      // v2-scoped secret key. delete-account uses the v1 key on /v1/subscribers;
+      // they're separate env vars so neither can break the other.
+      const rcKey = Deno.env.get("REVENUECAT_SECRET_API_KEY_V2");
       if (!projectId || !rcKey) {
         throw new Error("missing_revenuecat_env");
       }

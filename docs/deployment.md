@@ -51,7 +51,8 @@ Server-side secrets (not in `.env`):
 | Secret | Purpose |
 |--------|---------|
 | `REVENUECAT_WEBHOOK_SECRET` | Authenticates RevenueCat webhook requests |
-| `REVENUECAT_SECRET_API_KEY` | Admin API key (used by `delete-account` and `rc-entitlement-drift-check`) |
+| `REVENUECAT_SECRET_API_KEY` | RC v1 secret key (used by `delete-account` only) |
+| `REVENUECAT_SECRET_API_KEY_V2` | RC v2-scoped secret key (used by `rc-entitlement-drift-check`). Issue separately in RC dashboard with `customer_information:customers:read` + `customer_information:entitlements:read` scopes. |
 | `REVENUECAT_PROJECT_ID` | RC project id (used by `rc-entitlement-drift-check`) |
 | `RC_DRIFT_CHECK_INVOKE_SECRET` | Bearer for pg_cron → `rc-entitlement-drift-check`; must mirror `vault.secrets.rc_drift_check_invoke_secret`. See `docs/payments.md` → "Drift Health Check" for the first-time setup and rotation runbook. |
 
