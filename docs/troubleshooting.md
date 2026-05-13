@@ -87,10 +87,22 @@ Freemium limits are enforced server-side in Edge Functions, so there's no client
 **Symptom:** Purchase succeeds in RevenueCat dashboard but `profiles.entitlement` stays `free`.
 
 **Check:**
-1. Is the webhook URL correct in RevenueCat dashboard? (`https://<ref>.supabase.co/functions/v1/revenuecat-webhook`)
-2. Does the Bearer token in RevenueCat match `REVENUECAT_WEBHOOK_SECRET` in Supabase secrets?
-3. Is the Edge Function deployed? Check with: `curl -s -o /dev/null -w "%{http_code}" https://<ref>.supabase.co/functions/v1/revenuecat-webhook`
-4. Check Supabase Edge Function logs for errors
+1. **Sentry first** — search for an open `rc_entitlement_drift` or `revenuecat_webhook_auth_fail` issue. The scheduled drift check (`rc-entitlement-drift-check`, every 6h) is the fastest signal of in-band webhook failure. See `docs/payments.md` → "Drift Health Check" for the operator runbook.
+2. Is the webhook URL correct in RevenueCat dashboard? (`https://<ref>.supabase.co/functions/v1/revenuecat-webhook`)
+3. Does the Bearer token in RevenueCat match `REVENUECAT_WEBHOOK_SECRET` in Supabase secrets?
+4. Is the Edge Function deployed? Check with: `curl -s -o /dev/null -w "%{http_code}" https://<ref>.supabase.co/functions/v1/revenuecat-webhook`
+5. Check Supabase Edge Function logs for errors
+
+### Drift Check Alerts Firing
+
+**Symptom:** Sentry shows an open `rc_entitlement_drift` issue tagged `function: rc-entitlement-drift-check`.
+
+**Read the event:** `extra.drift_premium_missing` (highest priority — paid users locked out, same class as the 2026-05-12 outage), `extra.drift_premium_stale` (refund/expiration didn't propagate), and `extra.drift_orphan` (RC has a customer but no Supabase profile matches) list the affected `app_user_id`s. The `count_*` tags carry the full totals; `extra` arrays are capped at 50 ids each.
+
+**Check:**
+- Cross-check one id from `drift_premium_missing` against `mcp__revenuecat__get-customer` and `select entitlement from profiles where id = '<id>'`. If they disagree as the event claims, the webhook is the prime suspect — same diagnostic chain as "Webhook Not Updating Entitlement" above.
+- For acute relief: replay the RC event from the dashboard, or `update profiles set entitlement = 'premium' where id = '<id>'`.
+- The Sentry issue uses a stable fingerprint and **does not auto-resolve**. Once the next 6h run logs `drift_count: 0`, manually resolve the issue.
 
 ## Google Places API
 

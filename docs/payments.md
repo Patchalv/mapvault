@@ -66,6 +66,104 @@ Both keys are empty in development builds (`APP_VARIANT=development`), disabling
 
 The webhook is platform-agnostic — RevenueCat normalizes events from both Apple and Google into the same format.
 
+### Drift Health Check
+
+The webhook is the realtime path. The drift health check is the out-of-band backstop for deliveries that never arrive — RC retry-queue expiry, network blip, deploy mid-delivery, or in-band Sentry outages. It runs every 6 hours at `:17` past the hour (UTC), via a `pg_cron` job that POSTs to the `rc-entitlement-drift-check` Edge Function.
+
+**What it does:**
+
+1. Lists every RevenueCat customer for the project (paginated via `starting_after`, 100 per page).
+2. Reads `id, entitlement` from every `profiles` row.
+3. Classifies each user into one of three drift categories. Healthy users are not reported.
+4. If drift > 0, emits **one** Sentry event with a stable fingerprint so consecutive runs collapse into a single issue.
+
+**Drift categories:**
+
+| Category | Meaning | Sentry level |
+|---|---|---|
+| `drift_premium_missing` | RC says active premium, Supabase says `free`. **This is the 2026-05-12 outage class** — user paid but is locked out. | `error` |
+| `drift_premium_stale` | Supabase says `premium`, RC has no active premium (refund/expiration didn't propagate, or a manual grant has no RC backing). | `warning` |
+| `drift_orphan` | RC has active premium but no Supabase profile matches. Usually a deleted account whose RC record wasn't cleaned up, but worth eyeballing. | `warning` |
+
+The Sentry event's `extra` payload includes the first 50 affected ids per category. Use the `count_*` tags for full totals.
+
+**Reading the function logs:**
+
+Every run prints one heartbeat to the Edge Function logs regardless of outcome:
+
+```json
+{"event":"drift_check_complete","drift_count":0,"count_missing":0,"count_stale":0,"count_orphan":0,"rc_customer_count":63,"supabase_profile_count":189,"run_at":"..."}
+```
+
+`mcp__supabase__get_logs --service edge-function` is the fastest way to find it. A missing heartbeat means the cron job didn't run, which is itself a signal worth investigating.
+
+**Operator runbook — drift event fires:**
+
+1. Open the Sentry issue. Look at `tags.count_missing` first; that's the urgent class.
+2. Cross-check one affected id with `mcp__revenuecat__get-customer` and `select entitlement from profiles where id = '<id>'`. If they disagree as the event claims, the webhook is the prime suspect — same diagnostic chain as the 2026-05-12 incident.
+3. Fix the underlying webhook problem (secret drift, dead-letter, missing event). For acute relief on a specific user, replay the RC event from the dashboard or manually `update profiles set entitlement = 'premium' where id = '<id>'`.
+4. Once the next scheduled run logs `drift_count: 0`, **manually resolve the Sentry issue**. The fingerprint is stable, so the issue does not auto-resolve.
+
+**No allowlist policy:** there is intentionally no mechanism to mute a known-drifted user. If a user is drifted, it's a bug. If a beta tester ever needs grandfathered premium without RC backing, fix it by issuing them an RC entitlement (RC supports manual grants); do not add a Supabase-side exception.
+
+**Fate-sharing trade-off:** the drift check runs on Supabase, so a Supabase outage will take down the check at the same time as the webhook it backstops. The alternative — running the check as a GitHub Action — was rejected as too much new infrastructure for a small marginal robustness gain. Revisit if a future incident takes out Supabase scheduling specifically.
+
+**Secret-rotation runbook (`rc_drift_check_invoke_secret`):**
+
+The bearer that pg_cron uses to invoke the Edge Function lives in two places. **Both must change in lockstep** — the 2026-05-12 outage was caused by exactly this kind of multi-location single-secret drift.
+
+```bash
+NEW_SECRET=$(openssl rand -hex 32)
+supabase secrets set RC_DRIFT_CHECK_INVOKE_SECRET="$NEW_SECRET"
+```
+
+Then in the Supabase SQL editor:
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'rc_drift_check_invoke_secret'),
+  '<NEW_SECRET>'
+);
+
+-- VERIFY the vault row actually changed. Vault function signatures have
+-- varied across versions, and a silent no-op is exactly the failure mode
+-- that motivated this whole feature.
+select decrypted_secret = '<NEW_SECRET>' as rotated_ok
+  from vault.decrypted_secrets
+  where name = 'rc_drift_check_invoke_secret';
+```
+
+If `rotated_ok` is not `true`, the function-env and vault values are now out of sync. Stop, investigate, and re-rotate before the next cron fire.
+
+After both have changed and the vault row is verified, manually fire one run to confirm: `select cron.run_job((select jobid from cron.job where jobname = 'rc-entitlement-drift-check'));` and watch for a 200 + heartbeat in the function logs.
+
+**First-time setup (only once per environment):**
+
+```bash
+# 1. Generate and set the function env var
+INVOKE_SECRET=$(openssl rand -hex 32)
+supabase secrets set RC_DRIFT_CHECK_INVOKE_SECRET="$INVOKE_SECRET"
+supabase secrets set REVENUECAT_PROJECT_ID="proj18594bd9"
+# REVENUECAT_SECRET_API_KEY is already set (used by delete-account)
+
+# 2. Deploy the function
+supabase functions deploy rc-entitlement-drift-check --no-verify-jwt
+```
+
+Then in the Supabase SQL editor (Vault is not exposed via the supabase CLI):
+
+```sql
+select vault.create_secret(
+  '<INVOKE_SECRET from step 1>',
+  'rc_drift_check_invoke_secret',
+  'Bearer for the rc-entitlement-drift-check Edge Function'
+);
+```
+
+**Order matters:** apply the migrations **after** the vault secret is created — `supabase db push`. If migrations land first, the cron job schedules immediately and the next `:17` fire concatenates a NULL bearer (the vault subquery returns NULL when the secret row doesn't exist; `'Bearer ' || NULL = NULL` in SQL). The Edge Function then sees either a missing or null Authorization header and returns 401, producing a spurious `rc_drift_check_auth_fail` Sentry event with `reason: missing_secret` until the vault row is created.
+
+The cron job will start firing at the next `:17 mod 6h` UTC mark.
+
 ### Paywall
 
 - **Annual-only** subscription at €9.99/year
@@ -107,6 +205,9 @@ The webhook is platform-agnostic — RevenueCat normalizes events from both Appl
 
 - **Edge Function secrets** (set via dashboard or CLI):
   - `REVENUECAT_WEBHOOK_SECRET` — must match the Bearer token configured in RevenueCat webhook settings
+  - `REVENUECAT_SECRET_API_KEY` — RC v2 REST API key, used by `delete-account` and `rc-entitlement-drift-check`
+  - `REVENUECAT_PROJECT_ID` — RC project id, used by `rc-entitlement-drift-check`
+  - `RC_DRIFT_CHECK_INVOKE_SECRET` — Bearer for pg_cron → `rc-entitlement-drift-check`; must mirror `vault.secrets.rc_drift_check_invoke_secret`
   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` — auto-injected, no manual setup needed
 - **Deploy edge functions:**
   ```bash
@@ -114,6 +215,7 @@ The webhook is platform-agnostic — RevenueCat normalizes events from both Appl
   supabase functions deploy create-map
   supabase functions deploy add-place
   supabase functions deploy create-invite
+  supabase functions deploy rc-entitlement-drift-check
   ```
 
 ### Environment Variables
@@ -123,6 +225,9 @@ The webhook is platform-agnostic — RevenueCat normalizes events from both Appl
 | `EXPO_PUBLIC_REVENUECAT_API_KEY` | `.env` + EAS secrets | RevenueCat Apple API key, read at build time |
 | `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` | `.env` + EAS secrets | RevenueCat Google API key, read at build time |
 | `REVENUECAT_WEBHOOK_SECRET` | Supabase Edge Function secrets | Webhook auth, server-side only |
+| `REVENUECAT_SECRET_API_KEY` | Supabase Edge Function secrets | RC v2 REST API admin key (`delete-account`, `rc-entitlement-drift-check`) |
+| `REVENUECAT_PROJECT_ID` | Supabase Edge Function secrets | RC project id, used by `rc-entitlement-drift-check` |
+| `RC_DRIFT_CHECK_INVOKE_SECRET` | Supabase Edge Function secrets **and** Supabase Vault | Bearer that pg_cron uses to invoke `rc-entitlement-drift-check`; rotate in both places together |
 
 ---
 

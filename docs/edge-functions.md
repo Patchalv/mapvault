@@ -1,6 +1,6 @@
 # Edge Functions Reference
 
-6 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally — most use `auth.getUser()` with a user Bearer token, except `revenuecat-webhook` which validates a shared webhook secret.
+7 Supabase Edge Functions that enforce business rules that can't be trusted to the client. All deployed with `--no-verify-jwt` and validate auth internally — most use `auth.getUser()` with a user Bearer token, except `revenuecat-webhook` and `rc-entitlement-drift-check` which validate a shared bearer secret.
 
 ## Overview
 
@@ -11,6 +11,7 @@
 | `accept-invite` | Accept an invite token and join a map | Validates expiry, max uses, duplicates |
 | `create-invite` | Create an invite link for a map | Premium owners only |
 | `revenuecat-webhook` | Sync purchase events to entitlement | Maps RC events → `profiles.entitlement` |
+| `rc-entitlement-drift-check` | Scheduled reconciliation of RC active entitlements vs `profiles.entitlement` | Every 6h at :17 UTC via `pg_cron`; Sentry alert on drift > 0 |
 | `delete-account` | Delete user and all associated data | RC cleanup (best-effort) + auth deletion |
 
 ---
@@ -308,3 +309,55 @@ No request body required.
 `auth.users` (delete) → cascading cleanup via trigger handles all public schema tables
 
 See `docs/account-deletion.md` for the full deletion pipeline and what gets preserved vs deleted.
+
+---
+
+## rc-entitlement-drift-check
+
+Out-of-band health check that walks every RevenueCat customer and reconciles their active entitlements against `profiles.entitlement`. Drift > 0 fires a Sentry event with a stable fingerprint so consecutive runs collapse into one issue; drift = 0 produces a JSON heartbeat log only. Invoked by `pg_cron` every 6 hours at `:17` past the hour (UTC).
+
+**Auth:** Invoke-secret bearer (NOT a user token)
+
+### Request
+
+```
+POST /functions/v1/rc-entitlement-drift-check
+Authorization: Bearer <RC_DRIFT_CHECK_INVOKE_SECRET>
+```
+
+No request body. The cron migration (`20260513000002_schedule_rc_entitlement_drift_check.sql`) pulls the bearer live from `vault.decrypted_secrets` on each fire.
+
+### Responses
+
+| Status | Body | When |
+|--------|------|------|
+| 200 | `{ "drift_count": N }` | Run completed; `N == 0` is the healthy heartbeat (logs only). `N > 0` fires a single Sentry event with stable fingerprint, still 200 — drift is not an HTTP-level failure. |
+| 200 | `{ "message": "Concurrent run skipped" }` | Another run was in flight (table-row mutex) |
+| 401 | `{ "error": "Unauthorized" }` | Wrong/missing invoke secret; Sentry `rc_drift_check_auth_fail` fires |
+| 500 | `{ "error": "Internal server error" }` | RC API failure, cursor parse failure, or missing env vars; Sentry exception fires |
+
+### Drift Categories
+
+| Tag | Meaning | Sentry level |
+|---|---|---|
+| `count_missing` (`drift_premium_missing`) | RC says active premium, Supabase says `free` — the 2026-05-12 outage class | `error` |
+| `count_stale` (`drift_premium_stale`) | Supabase says `premium`, RC has no active premium | `warning` |
+| `count_orphan` (`drift_orphan`) | RC active premium but no Supabase profile matches | `warning` |
+
+Each Sentry event includes up to 50 ids per category in `extra`; full totals are in the tag `count_*` values.
+
+### Concurrency
+
+A table-row mutex on `public.drift_check_runs` (default-deny RLS) prevents overlapping runs. Stale rows (`started_at` > 10 minutes ago with `finished_at IS NULL`) are replaced on the next acquire attempt — there is no background sweeper, but the next 6-hourly cron fire is the heal trigger, so a crashed run can't block the cron for more than one cycle.
+
+### Secrets Required
+
+- `RC_DRIFT_CHECK_INVOKE_SECRET` — bearer that pg_cron uses to invoke this function; must mirror `vault.secrets.rc_drift_check_invoke_secret`
+- `REVENUECAT_SECRET_API_KEY` — RC v2 admin key (shared with `delete-account`)
+- `REVENUECAT_PROJECT_ID` — RC project id (`proj18594bd9`)
+
+### Tables Written
+
+`drift_check_runs` (mutex only; never touches `profiles`)
+
+See `docs/payments.md` → "Drift Health Check" for the operator runbook, secret rotation, and first-time setup.
