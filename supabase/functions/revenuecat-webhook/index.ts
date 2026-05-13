@@ -200,10 +200,9 @@ serve(async (req) => {
       console.error("MailerLite sync error (non-fatal):", mlErr);
     }
 
+    console.log("revenuecat-webhook updated profile", { app_user_id, event_type: type, entitlement });
     return new Response(
-      JSON.stringify({
-        message: `Updated user ${app_user_id} to ${entitlement}`,
-      }),
+      JSON.stringify({ message: `Updated to ${entitlement}` }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },
