@@ -25,16 +25,20 @@ serve(async (req) => {
 
     if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
       const reason = !webhookSecret ? "missing_secret" : "mismatch";
-      const headerPrefix = authHeader?.slice(0, 20) ?? null;
+      // Strip "Bearer " then take 8 chars of the token. Enough to
+      // distinguish "wrong secret" from "drifted secret" for drift detection
+      // while limiting brute-force material if Sentry access is ever compromised.
+      const tokenPrefix =
+        authHeader?.replace(/^Bearer /, "").slice(0, 8) ?? null;
       console.error("revenuecat-webhook auth fail", {
         reason,
         hasHeader: !!authHeader,
-        headerPrefix,
+        tokenPrefix,
       });
       Sentry.captureMessage("revenuecat_webhook_auth_fail", {
         level: "error",
         tags: { function: "revenuecat-webhook", reason },
-        extra: { headerPrefix, hasHeader: !!authHeader },
+        extra: { tokenPrefix, hasHeader: !!authHeader },
       });
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -108,6 +112,10 @@ serve(async (req) => {
         event_type: type,
         error: updateError.message,
       });
+      Sentry.captureException(updateError, {
+        tags: { function: "revenuecat-webhook", event_type: type },
+        extra: { app_user_id },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to update profile entitlement" }),
         {
@@ -118,6 +126,12 @@ serve(async (req) => {
     }
 
     if (!updatedRows || updatedRows.length === 0) {
+      // Return 200 (not 404) to acknowledge the event and stop RC's
+      // retry loop. The 0-rows case is almost always permanent:
+      //   - Deleted account (profile gone, RC still has the customer)
+      //   - app_user_id ↔ profiles.id mismatch (a bug, retries won't fix)
+      // The Sentry warning is the actionable signal; RC retrying for 5 days
+      // would just create event-count noise without resolving the underlying issue.
       console.error("revenuecat-webhook user not found", {
         app_user_id,
         event_type: type,
@@ -128,11 +142,9 @@ serve(async (req) => {
         extra: { app_user_id, entitlement },
       });
       return new Response(
-        JSON.stringify({
-          error: `No profile found for app_user_id ${app_user_id}`,
-        }),
+        JSON.stringify({ message: "No profile matched — logged to Sentry" }),
         {
-          status: 404,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         },
       );
