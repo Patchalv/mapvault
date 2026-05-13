@@ -13,7 +13,7 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - `npx expo start --dev-client` — Start dev server (production bundle ID, for payments testing)
 - `npm run lint` — Run linter
 - `npm run typecheck` — TypeScript check (run after code changes)
-- `eas build --profile <name> --platform ios` — Build for iOS (see `docs/builds.md` for profiles)
+- `eas build --profile <name> --platform <ios|android>` — Build (see `docs/builds.md` for the full profile matrix; common combos exposed as `npm run build:*` scripts)
 - `supabase db push` — Push migration to Supabase
 - `supabase functions deploy <name> --no-verify-jwt` — Deploy Edge Function to Supabase
 - `supabase functions serve` — Run Edge Functions locally
@@ -26,7 +26,7 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - **Backend:** Supabase (Postgres + RLS + Edge Functions + Auth)
 - **Maps:** Mapbox (`@rnmapbox/maps`) for map display
 - **Place Search:** Google Places API (New) for autocomplete
-- **Payments:** RevenueCat for iOS IAP
+- **Payments:** RevenueCat for iOS IAP + Google Play Billing
 - **Bottom Sheets:** `@gorhom/bottom-sheet`
 
 ## Code Style
@@ -124,6 +124,7 @@ functions/ ← Edge Functions
 - `map_place_tags` — junction: map_places <-> tags
 - `place_visits` — per-user visited status (personal, not shared)
 - `map_invites` — invite tokens for sharing maps
+- `drift_check_runs` — internal mutex for the `rc-entitlement-drift-check` cron job (RLS default-deny; not user-facing data — see `docs/database.md` → "Infrastructure Tables")
 
 ## IMPORTANT
 
@@ -142,11 +143,11 @@ functions/ ← Edge Functions
 - For new screens, create the route file in `app/` directory first
 - Never edit generated files: `supabase/types/database.ts`, `nativewind-env.d.ts`, `.expo/types/`
 - The Expo app version is canonical in `app.config.ts:version`. Keep `package.json:version` in sync when bumping — `npm install` rewrites the lockfile's version metadata from `package.json`, so a drift between the two will silently regress the lockfile on the next install.
+- Scheduled background work uses `pg_cron` + `pg_net`; bearers for cron → Edge Function calls live in `supabase_vault`, not function env vars. See `docs/payments.md` → "Drift Health Check" for the canonical pattern (mutex table + `SECURITY DEFINER` RPCs + vault-backed bearer).
 
 ## Reference Documents
 
 - `docs/prd.md` — Product requirements (what and why)
-- `docs/technical-plan.md` — Technical plan (how to build it)
 - `docs/setup.md` — Initial project setup and local environment
 - `docs/builds.md` — EAS build profiles and variants
 - `docs/release-process.md` — Version bumping and App Store submission
