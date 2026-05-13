@@ -1,6 +1,6 @@
 ---
 name: update
-description: Prepare for EAS Update (OTA) - validates channels, config, and ensures no local env vars leak
+description: Prepare for EAS Update (OTA) - validates channels, config, and confirms required SDK keys are present in EAS production environment
 argument-hint: '[channel] [--message "..."]'
 model: sonnet
 ---
@@ -167,12 +167,17 @@ eas env:list --environment production
 ```text
 🚫 MISSING REQUIRED SDK KEY
 ------------------------------------------
-EXPO_PUBLIC_REVENUECAT_API_KEY is not set in the EAS production environment.
+{MISSING_KEY} is not set in the EAS production environment.
 
-Publishing this OTA will break purchases for all users who receive it.
+Impact:
+  EXPO_PUBLIC_REVENUECAT_API_KEY   → purchases broken for all users
+  EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY → Android purchases broken
+  EXPO_PUBLIC_SENTRY_DSN           → silent error tracking blackout
+  EXPO_PUBLIC_POSTHOG_API_KEY      → silent analytics blackout
+  EXPO_PUBLIC_POSTHOG_HOST         → silent analytics blackout
 
 Fix: add the key via EAS dashboard or:
-  eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_API_KEY --value <key>
+  eas env:create --environment production --name {MISSING_KEY} --value <value>
 
 Do NOT publish until all required keys are confirmed present.
 ```
@@ -183,7 +188,7 @@ Do NOT publish until all required keys are confirmed present.
 env | grep EXPO_PUBLIC_ || echo 'No local EXPO_PUBLIC_ vars (good)'
 ```
 
-If local vars are set, they will override EAS environment vars during `eas update` unless `--environment production` is passed. The `--environment production` flag forces EAS to use only its stored secrets and ignore local overrides.
+If local vars are set, verify they match the EAS-stored values or unset them before publishing. The `--environment production` flag instructs EAS to inject its stored secrets into the bundle — it does not suppress local shell vars, so conflicting local values may still be present. When in doubt, open a clean shell with no `.env` sourced and re-run.
 
 ### 4. Channel/Branch Configuration
 
