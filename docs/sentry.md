@@ -2,7 +2,7 @@
 
 ## Overview
 
-MapVault uses [Sentry](https://sentry.io) for crash reporting, performance monitoring, and session replay. The SDK is `@sentry/react-native` v7.2.x (upgrade to v8.x tracked separately). The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
+MapVault uses [Sentry](https://sentry.io) for crash reporting, performance monitoring, and session replay. The SDK is `@sentry/react-native` v8.x. The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
 
 Sentry is **disabled in development** and only runs in production builds.
 

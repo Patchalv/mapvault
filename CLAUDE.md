@@ -118,6 +118,7 @@ functions/ ← Edge Functions
 - Bottom sheets use `@gorhom/bottom-sheet` — follow existing patterns
 - For new screens, create the route file in `app/` directory first
 - Never edit generated files: `supabase/types/database.ts`, `nativewind-env.d.ts`, `.expo/types/`
+- The Expo app version is canonical in `app.config.ts:version`. Keep `package.json:version` in sync when bumping — `npm install` rewrites the lockfile's version metadata from `package.json`, so a drift between the two will silently regress the lockfile on the next install.
 
 ## Reference Documents
 
