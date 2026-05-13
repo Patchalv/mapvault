@@ -140,11 +140,18 @@ After both have changed and the vault row is verified, manually fire one run to 
 **First-time setup (only once per environment):**
 
 ```bash
-# 1. Generate and set the function env var
+# 1. Generate and set the function env vars
 INVOKE_SECRET=$(openssl rand -hex 32)
 supabase secrets set RC_DRIFT_CHECK_INVOKE_SECRET="$INVOKE_SECRET"
 supabase secrets set REVENUECAT_PROJECT_ID="proj18594bd9"
-# REVENUECAT_SECRET_API_KEY is already set (used by delete-account)
+
+# REVENUECAT_SECRET_API_KEY_V2 is a SEPARATE key from REVENUECAT_SECRET_API_KEY.
+# delete-account uses the v1 key on /v1/subscribers; this function uses v2
+# endpoints which only accept a v2-scoped key. Issue a new v2 secret key in
+# the RC dashboard (Project Settings → API Keys) with permissions:
+#   customer_information:customers:read
+#   customer_information:entitlements:read
+supabase secrets set REVENUECAT_SECRET_API_KEY_V2="<v2-secret-key>"
 
 # 2. Deploy the function
 supabase functions deploy rc-entitlement-drift-check --no-verify-jwt
@@ -205,7 +212,8 @@ The cron job will start firing at the next `:17 mod 6h` UTC mark.
 
 - **Edge Function secrets** (set via dashboard or CLI):
   - `REVENUECAT_WEBHOOK_SECRET` — must match the Bearer token configured in RevenueCat webhook settings
-  - `REVENUECAT_SECRET_API_KEY` — RC v2 REST API key, used by `delete-account` and `rc-entitlement-drift-check`
+  - `REVENUECAT_SECRET_API_KEY` — RC **v1** secret key, used by `delete-account` against `/v1/subscribers`
+  - `REVENUECAT_SECRET_API_KEY_V2` — RC **v2**-scoped secret key (separate from the v1 key), used by `rc-entitlement-drift-check` against `/v2/projects/...` endpoints. Required scopes: `customer_information:customers:read`, `customer_information:entitlements:read`.
   - `REVENUECAT_PROJECT_ID` — RC project id, used by `rc-entitlement-drift-check`
   - `RC_DRIFT_CHECK_INVOKE_SECRET` — Bearer for pg_cron → `rc-entitlement-drift-check`; must mirror `vault.secrets.rc_drift_check_invoke_secret`
   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` — auto-injected, no manual setup needed
@@ -225,7 +233,8 @@ The cron job will start firing at the next `:17 mod 6h` UTC mark.
 | `EXPO_PUBLIC_REVENUECAT_API_KEY` | `.env` + EAS secrets | RevenueCat Apple API key, read at build time |
 | `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` | `.env` + EAS secrets | RevenueCat Google API key, read at build time |
 | `REVENUECAT_WEBHOOK_SECRET` | Supabase Edge Function secrets | Webhook auth, server-side only |
-| `REVENUECAT_SECRET_API_KEY` | Supabase Edge Function secrets | RC v2 REST API admin key (`delete-account`, `rc-entitlement-drift-check`) |
+| `REVENUECAT_SECRET_API_KEY` | Supabase Edge Function secrets | RC v1 secret key (`delete-account` only — used against `/v1/subscribers`) |
+| `REVENUECAT_SECRET_API_KEY_V2` | Supabase Edge Function secrets | RC v2-scoped secret key (`rc-entitlement-drift-check` — used against `/v2/projects/...` endpoints). Required scopes: `customer_information:customers:read`, `customer_information:entitlements:read`. |
 | `REVENUECAT_PROJECT_ID` | Supabase Edge Function secrets | RC project id, used by `rc-entitlement-drift-check` |
 | `RC_DRIFT_CHECK_INVOKE_SECRET` | Supabase Edge Function secrets **and** Supabase Vault | Bearer that pg_cron uses to invoke `rc-entitlement-drift-check`; rotate in both places together |
 

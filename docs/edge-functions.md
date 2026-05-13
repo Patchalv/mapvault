@@ -353,7 +353,7 @@ A table-row mutex on `public.drift_check_runs` (default-deny RLS) prevents overl
 ### Secrets Required
 
 - `RC_DRIFT_CHECK_INVOKE_SECRET` — bearer that pg_cron uses to invoke this function; must mirror `vault.secrets.rc_drift_check_invoke_secret`
-- `REVENUECAT_SECRET_API_KEY` — RC v2 admin key (shared with `delete-account`)
+- `REVENUECAT_SECRET_API_KEY_V2` — RC v2-scoped secret key with `customer_information:customers:read` + `customer_information:entitlements:read`. Distinct from `delete-account`'s v1 `REVENUECAT_SECRET_API_KEY`; v1 keys are rejected by RC v2 endpoints.
 - `REVENUECAT_PROJECT_ID` — RC project id (`proj18594bd9`)
 
 ### Tables Written
