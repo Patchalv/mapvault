@@ -10,7 +10,6 @@ Sentry.init({
 const RC_API_BASE = "https://api.revenuecat.com/v2";
 const JOB_NAME = "rc-entitlement-drift-check";
 const MAX_EXTRA_IDS = 50;
-const RC_PAGE_LIMIT = 100;
 
 interface RcEntitlement {
   id: string;
@@ -87,7 +86,7 @@ serve(async (req) => {
 
     try {
       const projectId = Deno.env.get("REVENUECAT_PROJECT_ID");
-      // RC v2 endpoints (list-customers, list-entitlements) require a
+      // RC v2 endpoints (get-customer, list-entitlements) require a
       // v2-scoped secret key. delete-account uses the v1 key on /v1/subscribers;
       // they're separate env vars so neither can break the other.
       const rcKey = Deno.env.get("REVENUECAT_SECRET_API_KEY_V2");
@@ -106,87 +105,57 @@ serve(async (req) => {
         throw new Error("premium_entitlement_not_found");
       }
 
-      // 4. Walk every RC customer, collect those whose active entitlements
-      // include premium. Pagination via starting_after cursor.
-      const rcPremiumIds = new Set<string>();
-      let rcCustomerCount = 0;
-      let cursor: string | null = null;
-      do {
-        const url = new URL(`${RC_API_BASE}/projects/${projectId}/customers`);
-        url.searchParams.set("limit", String(RC_PAGE_LIMIT));
-        if (cursor) url.searchParams.set("starting_after", cursor);
-
-        const res = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${rcKey}` },
-          signal: AbortSignal.timeout(15_000),
-        });
-        if (!res.ok) {
-          throw new Error(`rc_list_customers_${res.status}`);
-        }
-        const page = (await res.json()) as RcListResponse<RcCustomer>;
-        rcCustomerCount += page.items.length;
-        for (const customer of page.items) {
-          const items = customer.active_entitlements?.items ?? [];
-          if (items.some((e) => e.entitlement_id === premiumEntitlementId)) {
-            rcPremiumIds.add(customer.id);
-          }
-        }
-        if (page.next_page) {
-          const next = new URL(page.next_page, "https://api.revenuecat.com")
-            .searchParams.get("starting_after");
-          if (!next) {
-            // RC said "more results exist" but didn't give us a cursor we
-            // understand. Refuse to silently undercount — that would give
-            // a false clean drift report.
-            throw new Error("rc_next_page_parse_failed");
-          }
-          cursor = next;
-        } else {
-          cursor = null;
-        }
-      } while (cursor);
-
-      // 5. Read Supabase entitlement state.
+      // 4. Iterate over Supabase profiles, fetching each user's RC state
+      // individually. We tried the bulk GET /v2/projects/{id}/customers list
+      // endpoint first but observed it does NOT inline active_entitlements in
+      // production (despite the API reference suggesting otherwise), which
+      // caused every profile to be flagged as stale. The per-customer
+      // GET /v2/projects/{id}/customers/{customer_id} endpoint DOES inline
+      // active_entitlements correctly. Scales linearly with profile count;
+      // at ~50 profiles this is ~10s sequential. Add limited concurrency
+      // (e.g. batches of 10 via Promise.all) when profile count exceeds ~300.
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, entitlement");
       if (profilesError) {
         throw new Error(`supabase_profiles_${profilesError.message}`);
       }
-      const supabasePremiumIds = new Set<string>(
-        (profiles ?? [])
-          .filter((p) => p.entitlement === "premium")
-          .map((p) => p.id),
-      );
-      const supabaseAllIds = new Set<string>(
-        (profiles ?? []).map((p) => p.id),
-      );
-
-      // 6. Classify drift. See docs/payments.md "Drift Health Check" for the
-      // category definitions and what each one means operationally.
-      const driftPremiumMissing: string[] = []; // RC premium, Supabase free
-      const driftPremiumStale: string[] = []; // Supabase premium, RC not premium
-      const driftOrphan: string[] = []; // RC premium with no Supabase profile
-
-      for (const rcId of rcPremiumIds) {
-        if (!supabaseAllIds.has(rcId)) {
-          driftOrphan.push(rcId);
-        } else if (!supabasePremiumIds.has(rcId)) {
-          driftPremiumMissing.push(rcId);
-        }
+      if (!profiles) {
+        throw new Error("supabase_profiles_empty");
       }
-      for (const sbId of supabasePremiumIds) {
-        if (!rcPremiumIds.has(sbId)) {
-          driftPremiumStale.push(sbId);
+
+      // 5. Classify drift. We only detect the two operationally critical
+      // categories now: missing (the 2026-05-12 outage class, RC paid /
+      // Supabase free) and stale (Supabase premium / RC not active). The
+      // orphan category (RC customer with no Supabase profile) is dropped
+      // because detecting it would require listing every RC customer with
+      // their active entitlements — exactly the list endpoint that proved
+      // unreliable. The webhook's `revenuecat_webhook_user_not_found`
+      // captures one half of that gap (RC event for an unknown profile) and
+      // orphans from already-deleted accounts are not operationally urgent.
+      const driftPremiumMissing: string[] = [];
+      const driftPremiumStale: string[] = [];
+
+      for (const profile of profiles) {
+        const rcActivePremium = await isCustomerActivePremium(
+          profile.id,
+          projectId,
+          rcKey,
+          premiumEntitlementId,
+        );
+
+        if (profile.entitlement === "premium" && !rcActivePremium) {
+          driftPremiumStale.push(profile.id);
+        } else if (profile.entitlement === "free" && rcActivePremium) {
+          driftPremiumMissing.push(profile.id);
         }
       }
 
       const countMissing = driftPremiumMissing.length;
       const countStale = driftPremiumStale.length;
-      const countOrphan = driftOrphan.length;
-      const driftCount = countMissing + countStale + countOrphan;
+      const driftCount = countMissing + countStale;
 
-      // 7. Single Sentry event when drift > 0; stable fingerprint collapses
+      // 6. Single Sentry event when drift > 0; stable fingerprint collapses
       // consecutive runs into one issue. No event on the healthy path —
       // the heartbeat below is the only "still running" signal.
       if (driftCount > 0) {
@@ -198,14 +167,11 @@ serve(async (req) => {
             context: "rc_entitlement_drift",
             count_missing: String(countMissing),
             count_stale: String(countStale),
-            count_orphan: String(countOrphan),
           },
           extra: {
             drift_premium_missing: driftPremiumMissing.slice(0, MAX_EXTRA_IDS),
             drift_premium_stale: driftPremiumStale.slice(0, MAX_EXTRA_IDS),
-            drift_orphan: driftOrphan.slice(0, MAX_EXTRA_IDS),
-            rc_customer_count: rcCustomerCount,
-            supabase_profile_count: supabaseAllIds.size,
+            supabase_profile_count: profiles.length,
             run_at: runAt,
           },
         });
@@ -221,9 +187,7 @@ serve(async (req) => {
         drift_count: driftCount,
         count_missing: countMissing,
         count_stale: countStale,
-        count_orphan: countOrphan,
-        rc_customer_count: rcCustomerCount,
-        supabase_profile_count: supabaseAllIds.size,
+        supabase_profile_count: profiles.length,
       }));
 
       return new Response(
@@ -275,4 +239,31 @@ async function resolvePremiumEntitlementId(
   }
   const data = (await res.json()) as RcListResponse<RcEntitlement>;
   return data.items.find((e) => e.lookup_key === "premium")?.id ?? null;
+}
+
+async function isCustomerActivePremium(
+  customerId: string,
+  projectId: string,
+  rcKey: string,
+  premiumEntitlementId: string,
+): Promise<boolean> {
+  const res = await fetch(
+    `${RC_API_BASE}/projects/${projectId}/customers/${customerId}`,
+    {
+      headers: { Authorization: `Bearer ${rcKey}` },
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  // 404 = customer has no RC record at all. That's not "drift" by itself;
+  // a free-tier Supabase user who never went near payments will look like
+  // this, which is the healthy state. Treat as "not active premium".
+  if (res.status === 404) {
+    return false;
+  }
+  if (!res.ok) {
+    throw new Error(`rc_get_customer_${res.status}`);
+  }
+  const customer = (await res.json()) as RcCustomer;
+  const items = customer.active_entitlements?.items ?? [];
+  return items.some((e) => e.entitlement_id === premiumEntitlementId);
 }
