@@ -50,6 +50,9 @@ serve(async (req) => {
         level: "error",
         tags: { function: JOB_NAME, reason },
       });
+      // Deno Edge isolates terminate when Response is returned; Sentry's
+      // async transport may drop queued events without an explicit flush.
+      await Sentry.flush(2000);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { "Content-Type": "application/json" } },
@@ -203,6 +206,9 @@ serve(async (req) => {
             run_at: runAt,
           },
         });
+        // Flush before the function returns so the Deno isolate doesn't
+        // tear down the Sentry transport mid-send.
+        await Sentry.flush(2000);
       }
 
       console.log(JSON.stringify({
@@ -236,6 +242,9 @@ serve(async (req) => {
   } catch (err) {
     console.error(`${JOB_NAME} error:`, err);
     Sentry.captureException(err, { tags: { function: JOB_NAME } });
+    // Flush before the 500 return so the exception event reaches Sentry
+    // before the Deno isolate tears down.
+    await Sentry.flush(2000);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
