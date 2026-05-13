@@ -1,6 +1,6 @@
 # Database Schema
 
-9 tables in the `public` schema, all with RLS enabled. Supabase Auth manages `auth.users`; everything else lives here.
+9 application tables in the `public` schema plus 1 internal infrastructure table (`drift_check_runs`), all with RLS enabled. Supabase Auth manages `auth.users`; everything else lives here.
 
 ## Entity Relationships
 
@@ -171,6 +171,22 @@ Invite tokens for sharing maps with other users.
 
 **RLS:** Map members can SELECT invites for their maps. Owners can INSERT (enforced via `create-invite` Edge Function which checks premium entitlement).
 
+## Infrastructure Tables
+
+These tables back internal machinery, not user-facing data. They are intentionally excluded from the entity-relationship diagram above.
+
+### drift_check_runs
+
+Mutex row for the `rc-entitlement-drift-check` Edge Function so overlapping cron fires don't double-report drift. See `docs/payments.md` → "Drift Health Check".
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| job_name | text | PK | Stable string `'rc-entitlement-drift-check'` |
+| started_at | timestamptz | NOT NULL, default `now()` | Set on every acquire |
+| finished_at | timestamptz | nullable | NULL = run in flight; set by `release_drift_check_lock` |
+
+**RLS:** Enabled with **no policies** (default-deny). The `SECURITY DEFINER` helpers `try_acquire_drift_check_lock(text, interval)` and `release_drift_check_lock(text)` run as table owner and bypass RLS; `anon` and `authenticated` cannot read or write via PostgREST.
+
 ## Triggers
 
 ### on_auth_user_created → `handle_new_user()`
@@ -217,3 +233,5 @@ SECURITY DEFINER function that checks if the current user is a member of a map. 
 | `20260223000001_cleanup_orphaned_places_on_delete.sql` | Add orphaned places cleanup to deletion trigger |
 | `20260304000001_freemium_roles_redesign.sql` | Rename `editor` → `contributor`, add `member` role, restrict RLS to owner/contributor writes, add CHECK constraints |
 | `20260305000001_fix_map_place_tags_cross_map.sql` | Fix cross-map tag validation in map_place_tags INSERT and DELETE RLS policies |
+| `20260513000001_enable_pg_cron_and_drift_check_lock.sql` | Enable `pg_cron`; create `drift_check_runs` + `try_acquire_drift_check_lock` / `release_drift_check_lock` RPCs |
+| `20260513000002_schedule_rc_entitlement_drift_check.sql` | Schedule `rc-entitlement-drift-check` cron job (every 6h at :17 UTC) with bearer from `vault.decrypted_secrets` |

@@ -26,10 +26,10 @@ Deploy individual functions after changes:
 supabase functions deploy <function-name> --no-verify-jwt
 ```
 
-Deploy all 5 at once:
+Deploy all 7 at once:
 
 ```bash
-for fn in create-map add-place accept-invite revenuecat-webhook delete-account; do
+for fn in create-map add-place accept-invite create-invite revenuecat-webhook rc-entitlement-drift-check delete-account; do
   supabase functions deploy "$fn" --no-verify-jwt
 done
 ```
@@ -51,7 +51,9 @@ Server-side secrets (not in `.env`):
 | Secret | Purpose |
 |--------|---------|
 | `REVENUECAT_WEBHOOK_SECRET` | Authenticates RevenueCat webhook requests |
-| `REVENUECAT_SECRET_API_KEY` | Admin API key for subscriber deletion |
+| `REVENUECAT_SECRET_API_KEY` | Admin API key (used by `delete-account` and `rc-entitlement-drift-check`) |
+| `REVENUECAT_PROJECT_ID` | RC project id (used by `rc-entitlement-drift-check`) |
+| `RC_DRIFT_CHECK_INVOKE_SECRET` | Bearer for pg_cron → `rc-entitlement-drift-check`; must mirror `vault.secrets.rc_drift_check_invoke_secret`. See `docs/payments.md` → "Drift Health Check" for the first-time setup and rotation runbook. |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected — no manual setup needed.
 
