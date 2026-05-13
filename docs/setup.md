@@ -42,7 +42,7 @@ cp .env.example .env
 | `EXPO_PUBLIC_REVENUECAT_API_KEY` | [RevenueCat Dashboard](https://app.revenuecat.com/) → Project → API Keys → Apple public key |
 | `EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY` | Same dashboard → Google Play public key |
 
-> All `EXPO_PUBLIC_*` values are surfaced via `app.config.ts` → `extra` and read at runtime through `Constants.expoConfig?.extra`. The `requireKey()` helper in `app.config.ts` throws if any required var is missing outside dev — including during `eas update` runs invoked without `--environment production`. See [docs/troubleshooting.md](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
+> All `EXPO_PUBLIC_*` values are surfaced via `app.config.ts` → `extra` and read at runtime through `Constants.expoConfig?.extra`. The `requireKey()` helper in `app.config.ts` throws if any required var is missing during native EAS builds. For OTA updates, `--environment [env]` is the only safeguard — there is no code-level catch. See [docs/troubleshooting.md](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
 
 ## Supabase
 

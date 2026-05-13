@@ -49,7 +49,7 @@ PostHogProvider (app/_layout.tsx, outermost provider)
 
 Both are set in `.env` (local) and EAS env (`production` / `preview` environments). They are `EXPO_PUBLIC_` prefixed so they're embedded into the JS bundle.
 
-> **OTA gotcha:** `eas update` does not load EAS env vars unless invoked with `--environment production` (or `preview`). Without the flag, the bundle ships with empty strings and PostHog silently drops every event — this is one of the two telemetry blackouts memorialized in [the troubleshooting doc](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates). `requireKey()` in `app.config.ts` now throws when this happens so the OTA fails loudly rather than silently shipping broken.
+> **OTA gotcha:** `eas update` does not load EAS env vars unless invoked with `--environment production` (or `preview`). Without the flag, the bundle ships with empty strings and PostHog silently drops every event — this is one of the two telemetry blackouts memorialized in [the troubleshooting doc](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates). There is no code-level catch for this — `--environment production` (or `preview`) is the only safeguard; do not skip it.
 
 ## User Identification
 

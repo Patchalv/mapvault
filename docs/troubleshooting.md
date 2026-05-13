@@ -173,7 +173,7 @@ eas build --profile development:simulator --platform ios
 This has happened twice:
 - **2026-03-27 → 2026-05-04+:** Sentry ingested zero production events for ~5 weeks because the latest OTA bundle shipped with an empty DSN. The launch outage that paged on the paywall (RevenueCat keys empty) shared the same root cause; PostHog also went dark in that window, which is part of why it took hours to spot.
 
-**Guardrail:** `app.config.ts` now uses a `requireKey()` helper that throws when an `EXPO_PUBLIC_*` var is missing outside `IS_DEV`. So an `eas update` invoked without `--environment production` will now **fail loudly** instead of silently shipping a broken bundle. The fix is always to add the flag, never to weaken the guardrail.
+**Guardrail:** `app.config.ts` uses a `requireKey()` helper that throws when an `EXPO_PUBLIC_*` var is missing during native EAS builds (`EAS_BUILD=true`). For OTA updates (`eas update`) there is no code-level catch — `--environment [env]` is the only safeguard, and a bare `eas update` without the flag will **silently** ship empty SDK keys. The fix is always to add the flag, never to skip it.
 
 **Always run:**
 

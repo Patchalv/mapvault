@@ -57,7 +57,7 @@ Sentry.init({
 });
 ```
 
-The DSN is **read from `Constants.expoConfig?.extra?.sentryDsn`**, not directly from `process.env`. The mapping from `EXPO_PUBLIC_SENTRY_DSN` → `extra.sentryDsn` happens in `app.config.ts` via a `requireKey()` helper that throws if the env var is missing in a non-dev build. This is a deliberate guardrail against the OTA failure mode where `eas update` without `--environment production` would silently bake empty strings into the bundle and disable Sentry. See [Why telemetry can silently disappear in OTAs](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
+The DSN is **read from `Constants.expoConfig?.extra?.sentryDsn`**, not directly from `process.env`. The mapping from `EXPO_PUBLIC_SENTRY_DSN` → `extra.sentryDsn` happens in `app.config.ts` via a `requireKey()` helper that throws if the env var is missing during native EAS builds (`EAS_BUILD=true`). For OTA updates there is no code-level catch — `--environment production` is the only safeguard. See [Why telemetry can silently disappear in OTAs](./troubleshooting.md#why-telemetry-can-silently-disappear-in-ota-updates).
 
 | Setting | Value | Rationale |
 |---|---|---|
@@ -86,7 +86,7 @@ This means every Sentry error event includes the user ID and email, making it ea
 
 The DSN is ingest-only and safe to commit, but it must still be passed via the right delivery path:
 - **Native builds (`eas build`):** EAS Build loads the env automatically.
-- **OTA updates (`eas update`):** You **must** pass `--environment production` (or `preview`) or the bundle ships with an empty DSN and Sentry is disabled silently. `requireKey()` in `app.config.ts` will throw to surface this — do not work around it.
+- **OTA updates (`eas update`):** You **must** pass `--environment production` (or `preview`) or the bundle ships with an empty DSN and Sentry is disabled silently. There is no code-level catch for this — `--environment [env]` is the only safeguard; do not skip it.
 
 ## Development: Spotlight
 
