@@ -148,7 +148,7 @@ eas update --branch preview --environment preview --message "Description of chan
 eas update --branch production --environment production --message "Description of changes"
 ```
 
-> **`--environment` is required.** Without it, `eas update` does not load EAS-stored env vars and `EXPO_PUBLIC_*` values resolve to empty strings in the OTA bundle — silently disabling Sentry, PostHog, and RevenueCat. This caused the post-launch paywall outage and the ~5-week Sentry blackout. `app.config.ts` now uses `requireKey()` to throw when this happens, but always pass the flag explicitly.
+> **`--environment` is required.** Without it, `eas update` does not load EAS-stored env vars and `EXPO_PUBLIC_*` values resolve to empty strings in the OTA bundle — silently disabling Sentry, PostHog, and RevenueCat. This caused the post-launch paywall outage and the ~5-week Sentry blackout. For native builds (`eas build`), `requireKey()` in `app.config.ts` throws fast if SDK keys are missing. For OTA updates there is no code-level catch — `--environment [env]` is the only safeguard, so always pass it explicitly.
 
 **When OTA works:** JS/TS code changes, style changes, asset changes (images, fonts).
 

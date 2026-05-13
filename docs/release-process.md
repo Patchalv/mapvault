@@ -44,7 +44,7 @@ eas update --branch preview --environment preview --message "Brief description o
 eas update --branch production --environment production --message "Brief description of changes"
 ```
 
-> **`--environment` is mandatory.** Without it, `eas update` does not load EAS-stored env vars and the OTA bundle ships with empty strings for every `EXPO_PUBLIC_*` value — silently breaking Sentry, PostHog, and RevenueCat. `app.config.ts` now uses `requireKey()` to fail loudly when this happens, but the rule still applies. Same for `--branch preview` / `--environment preview`.
+> **`--environment` is mandatory.** Without it, `eas update` does not load EAS-stored env vars and the OTA bundle ships with empty strings for every `EXPO_PUBLIC_*` value — silently breaking Sentry, PostHog, and RevenueCat. For native builds, `requireKey()` in `app.config.ts` throws fast if SDK keys are missing. For OTA updates there is no code-level catch — `--environment [env]` is the only safeguard. Same for `--branch preview` / `--environment preview`.
 
 Updates are downloaded on next app launch. No App Store review required.
 
