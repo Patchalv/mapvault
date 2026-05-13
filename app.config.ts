@@ -6,10 +6,23 @@ const IS_PREVIEW = process.env.APP_VARIANT === "preview";
 const requireKey = (name: string): string => {
   const value = process.env[name];
   if (!value) {
+    // Development builds skip key validation — local dev doesn't need SDK keys.
     if (IS_DEV) return "";
-    throw new Error(
-      `Missing required env var ${name}. For OTAs run \`eas update ... --environment production\`. For native builds ensure EAS Build env is configured.`,
-    );
+    // IS_PREVIEW is intentionally NOT exempt here — preview native builds
+    // (APP_VARIANT=preview) must also fail fast when SDK keys are missing.
+    //
+    // EAS_BUILD=true is set explicitly in eas.json for the preview and
+    // production build profiles. During `eas update`, this config is evaluated
+    // locally before EAS injects env vars, so EAS_BUILD is never set then.
+    // WARNING: running `eas update` WITHOUT --environment [env] means EAS will
+    // not inject the real values at bundle time either — the "" will ship. The
+    // /update skill's pre-flight checklist is the only safeguard for that case.
+    if (process.env.EAS_BUILD === "true") {
+      throw new Error(
+        `Missing required env var ${name}. Ensure EAS Build env is configured for this profile.`,
+      );
+    }
+    return "";
   }
   return value;
 };
