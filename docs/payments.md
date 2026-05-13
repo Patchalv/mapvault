@@ -83,16 +83,17 @@ The webhook is the realtime path. The drift health check is the out-of-band back
 |---|---|---|
 | `drift_premium_missing` | RC says active premium, Supabase says `free`. **This is the 2026-05-12 outage class** — user paid but is locked out. | `error` |
 | `drift_premium_stale` | Supabase says `premium`, RC has no active premium (refund/expiration didn't propagate, or a manual grant has no RC backing). | `warning` |
-| `drift_orphan` | RC has active premium but no Supabase profile matches. Usually a deleted account whose RC record wasn't cleaned up, but worth eyeballing. | `warning` |
 
 The Sentry event's `extra` payload includes the first 50 affected ids per category. Use the `count_*` tags for full totals.
+
+> **Why no orphan category?** The function iterates over Supabase profiles and fetches each user's RC state individually — that catches both drift directions correctly but can't see RC customers without a matching Supabase profile. An earlier bulk implementation reported `drift_orphan` but the bulk endpoint didn't reliably return active-entitlement state, which broke missing/stale detection. Orphan detection was dropped as the lesser-value category; the webhook's `revenuecat_webhook_user_not_found` already covers the live half of that gap.
 
 **Reading the function logs:**
 
 Every run prints one heartbeat to the Edge Function logs regardless of outcome:
 
 ```json
-{"event":"drift_check_complete","drift_count":0,"count_missing":0,"count_stale":0,"count_orphan":0,"rc_customer_count":63,"supabase_profile_count":189,"run_at":"..."}
+{"event":"drift_check_complete","drift_count":0,"count_missing":0,"count_stale":0,"supabase_profile_count":47,"run_at":"..."}
 ```
 
 `mcp__supabase__get_logs --service edge-function` is the fastest way to find it. A missing heartbeat means the cron job didn't run, which is itself a signal worth investigating.

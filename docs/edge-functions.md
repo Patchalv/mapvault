@@ -314,7 +314,7 @@ See `docs/account-deletion.md` for the full deletion pipeline and what gets pres
 
 ## rc-entitlement-drift-check
 
-Out-of-band health check that walks every RevenueCat customer and reconciles their active entitlements against `profiles.entitlement`. Drift > 0 fires a Sentry event with a stable fingerprint so consecutive runs collapse into one issue; drift = 0 produces a JSON heartbeat log only. Invoked by `pg_cron` every 6 hours at `:17` past the hour (UTC).
+Out-of-band health check that iterates over every `profiles` row and reconciles each user's `entitlement` against their RC active-entitlement state, fetched one customer at a time via `GET /v2/projects/{id}/customers/{customer_id}` (which inlines `active_entitlements` reliably). Drift > 0 fires a Sentry event with a stable fingerprint so consecutive runs collapse into one issue; drift = 0 produces a JSON heartbeat log only. Invoked by `pg_cron` every 6 hours at `:17` past the hour (UTC).
 
 **Auth:** Invoke-secret bearer (NOT a user token)
 
@@ -334,7 +334,7 @@ No request body. The cron migration (`20260513000002_schedule_rc_entitlement_dri
 | 200 | `{ "drift_count": N }` | Run completed; `N == 0` is the healthy heartbeat (logs only). `N > 0` fires a single Sentry event with stable fingerprint, still 200 — drift is not an HTTP-level failure. |
 | 200 | `{ "message": "Concurrent run skipped" }` | Another run was in flight (table-row mutex) |
 | 401 | `{ "error": "Unauthorized" }` | Wrong/missing invoke secret; Sentry `rc_drift_check_auth_fail` fires |
-| 500 | `{ "error": "Internal server error" }` | RC API failure, cursor parse failure, or missing env vars; Sentry exception fires |
+| 500 | `{ "error": "Internal server error" }` | RC API failure or missing env vars; Sentry exception fires |
 
 ### Drift Categories
 
@@ -342,9 +342,10 @@ No request body. The cron migration (`20260513000002_schedule_rc_entitlement_dri
 |---|---|---|
 | `count_missing` (`drift_premium_missing`) | RC says active premium, Supabase says `free` — the 2026-05-12 outage class | `error` |
 | `count_stale` (`drift_premium_stale`) | Supabase says `premium`, RC has no active premium | `warning` |
-| `count_orphan` (`drift_orphan`) | RC active premium but no Supabase profile matches | `warning` |
 
 Each Sentry event includes up to 50 ids per category in `extra`; full totals are in the tag `count_*` values.
+
+> **Note on orphan detection.** An earlier implementation also reported `drift_orphan` (RC active premium with no matching Supabase profile). That detection was dropped when the function moved to per-profile iteration — finding it would require listing every RC customer with their active entitlements, exactly the bulk endpoint that proved unreliable in production. The webhook's `revenuecat_webhook_user_not_found` already captures the live half of this case (an RC event for a profile that no longer exists).
 
 ### Concurrency
 

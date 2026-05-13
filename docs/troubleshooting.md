@@ -97,7 +97,7 @@ Freemium limits are enforced server-side in Edge Functions, so there's no client
 
 **Symptom:** Sentry shows an open `rc_entitlement_drift` issue tagged `function: rc-entitlement-drift-check`.
 
-**Read the event:** `extra.drift_premium_missing` (highest priority — paid users locked out, same class as the 2026-05-12 outage), `extra.drift_premium_stale` (refund/expiration didn't propagate), and `extra.drift_orphan` (RC has a customer but no Supabase profile matches) list the affected `app_user_id`s. The `count_*` tags carry the full totals; `extra` arrays are capped at 50 ids each.
+**Read the event:** `extra.drift_premium_missing` (highest priority — paid users locked out, same class as the 2026-05-12 outage) and `extra.drift_premium_stale` (refund/expiration didn't propagate, or a Supabase-side grant has no RC backing) list the affected `app_user_id`s. The `count_*` tags carry the full totals; `extra` arrays are capped at 50 ids each.
 
 **Check:**
 - Cross-check one id from `drift_premium_missing` against `mcp__revenuecat__get-customer` and `select entitlement from profiles where id = '<id>'`. If they disagree as the event claims, the webhook is the prime suspect — same diagnostic chain as "Webhook Not Updating Entitlement" above.
