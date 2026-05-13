@@ -145,12 +145,14 @@ Consider if you need a new native build instead.
 
 **ALWAYS use `--environment production` for production channel updates.** Without it, EAS injects empty strings for all `EXPO_PUBLIC_*` vars, and the RC/Sentry/PostHog SDKs silently fail to initialize. This caused a production paywall outage on 2026-05-12 (OTA bundle `019e1be8`).
 
-**Validate required SDK keys are non-empty in the EAS environment:**
+**Validate required SDK keys are present in the EAS environment:**
 
 ```bash
 # Verify required keys are configured in EAS production environment
 eas env:list --environment production
 ```
+
+> **Note:** `eas env:list` confirms presence but masks values. It cannot detect an empty stored value. If you recently rotated keys, verify the actual value is populated via the EAS dashboard before publishing.
 
 **Required keys that MUST be present and non-empty for production OTAs:**
 
@@ -304,6 +306,7 @@ Date: {date}
 🔐 ENVIRONMENT VARIABLES
 ------------------------------------------
 ✅ EXPO_PUBLIC_REVENUECAT_API_KEY present in EAS production env
+✅ EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY present in EAS production env
 ✅ EXPO_PUBLIC_SENTRY_DSN present in EAS production env
 ✅ EXPO_PUBLIC_POSTHOG_API_KEY present in EAS production env
 ✅ EXPO_PUBLIC_POSTHOG_HOST present in EAS production env
@@ -452,8 +455,8 @@ If an update causes issues:
 # List recent updates on branch
 eas update:list --branch production --limit 10
 
-# Roll back by republishing previous update
-eas update:republish --group {previous-update-group-id}
+# Roll back by republishing previous update (production requires --environment production)
+eas update:republish --group {previous-update-group-id} --environment production
 ```
 
 **Include in output:**
@@ -464,11 +467,11 @@ eas update:republish --group {previous-update-group-id}
 If this update causes issues, roll back with:
 
   eas update:list --branch {branch} --limit 10
-  eas update:republish --group {previous-group-id}
+  eas update:republish --group {previous-group-id} --environment production
 
-Or publish a new fix:
+Or publish a new fix (production ALWAYS requires --environment production):
 
-  eas update --branch {branch} --message "Hotfix: ..."
+  eas update --channel production --environment production --message "Hotfix: ..."
 ```
 
 ## Best Practices Checklist
