@@ -164,7 +164,7 @@ eas env:list --environment production
 
 **If any key is missing from the EAS environment:**
 
-```
+```text
 🚫 MISSING REQUIRED SDK KEY
 ------------------------------------------
 EXPO_PUBLIC_REVENUECAT_API_KEY is not set in the EAS production environment.
@@ -501,8 +501,8 @@ eas update:list --branch production
 # View update details
 eas update:view {group-id}
 
-# Republish (rollback to) previous update
-eas update:republish --group {previous-group-id}
+# Republish (rollback to) previous update (production requires --environment production)
+eas update:republish --group {previous-group-id} --environment production
 
 # Delete an update (cannot undo distribution)
 eas update:delete --group {group-id}
