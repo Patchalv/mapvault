@@ -151,6 +151,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-localization",
+    "expo-web-browser",
     [
       "@sentry/react-native/expo",
       {
