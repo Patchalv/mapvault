@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import * as Sentry from '@sentry/react-native';
@@ -15,6 +16,8 @@ import {
   isPremium,
 } from '@/lib/revenuecat';
 import type { Profile } from '@/types';
+
+const IS_PRODUCTION = Constants.expoConfig?.extra?.appVariant === 'production';
 
 export function useRevenueCat() {
   const { user } = useAuth();
@@ -115,10 +118,12 @@ export function useRevenueCat() {
       const key = `error:${offerings.errorUpdatedAt}`;
       if (reportedKeyRef.current === key) return;
       reportedKeyRef.current = key;
-      Sentry.captureException(offerings.error, {
-        tags: { context: 'rc_offerings', platform: Platform.OS },
-        extra: { userId, revenueCatReady },
-      });
+      if (IS_PRODUCTION) {
+        Sentry.captureException(offerings.error, {
+          tags: { context: 'rc_offerings', platform: Platform.OS },
+          extra: { userId, revenueCatReady },
+        });
+      }
       track('paywall_offerings_load_failed', { reason: 'error' });
       return;
     }
@@ -127,16 +132,18 @@ export function useRevenueCat() {
       const key = `empty:${offerings.dataUpdatedAt}`;
       if (reportedKeyRef.current === key) return;
       reportedKeyRef.current = key;
-      Sentry.captureMessage('rc_offerings_empty', {
-        level: 'warning',
-        tags: { context: 'rc_offerings', platform: Platform.OS },
-        extra: {
-          userId,
-          revenueCatReady,
-          hasCurrent: !!data.current,
-          currentIdentifier: data.current?.identifier ?? null,
-        },
-      });
+      if (IS_PRODUCTION) {
+        Sentry.captureMessage('rc_offerings_empty', {
+          level: 'warning',
+          tags: { context: 'rc_offerings', platform: Platform.OS },
+          extra: {
+            userId,
+            revenueCatReady,
+            hasCurrent: !!data.current,
+            currentIdentifier: data.current?.identifier ?? null,
+          },
+        });
+      }
       track('paywall_offerings_load_failed', { reason: 'empty' });
     }
   }, [
