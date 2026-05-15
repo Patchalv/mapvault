@@ -24,7 +24,12 @@ const REVENUECAT_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY;
 // WARNING: running `eas update` WITHOUT --environment [env] means EAS will
 // not inject the real values at bundle time either — the "" will ship. The
 // /update skill's pre-flight checklist is the only safeguard for that case.
-if (process.env.EAS_BUILD === "true") {
+//
+// CI=true is set by EAS Build servers but NOT by the local EAS CLI when it
+// reads the config before queuing a build. Without this second check, the
+// guard fires locally (EAS_BUILD=true from eas.json env section) before
+// EAS secrets are injected, causing "eas build" to fail before it starts.
+if (process.env.EAS_BUILD === "true" && process.env.CI === "true") {
   if (!SENTRY_DSN) {
     throw new Error(
       "Missing required env var EXPO_PUBLIC_SENTRY_DSN. Ensure EAS Build env is configured for this profile.",
