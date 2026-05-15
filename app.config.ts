@@ -25,11 +25,13 @@ const REVENUECAT_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY;
 // not inject the real values at bundle time either — the "" will ship. The
 // /update skill's pre-flight checklist is the only safeguard for that case.
 //
-// CI=true is set by EAS Build servers but NOT by the local EAS CLI when it
-// reads the config before queuing a build. Without this second check, the
-// guard fires locally (EAS_BUILD=true from eas.json env section) before
-// EAS secrets are injected, causing "eas build" to fail before it starts.
-if (process.env.EAS_BUILD === "true" && process.env.CI === "true") {
+// EAS_BUILD_RUNNER=eas-build is set by EAS Build workers but NOT by the local
+// EAS CLI when it reads the config before queuing a build. Without this second
+// check, the guard fires locally (EAS_BUILD=true from eas.json env section)
+// before EAS secrets are injected, causing "eas build" to fail before it
+// starts. Using EAS_BUILD_RUNNER (not CI) avoids a false-positive if eas build
+// is ever called from a GitHub Actions runner that sets CI=true.
+if (process.env.EAS_BUILD === "true" && process.env.EAS_BUILD_RUNNER === "eas-build") {
   if (!SENTRY_DSN) {
     throw new Error(
       "Missing required env var EXPO_PUBLIC_SENTRY_DSN. Ensure EAS Build env is configured for this profile.",
