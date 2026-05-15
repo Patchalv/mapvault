@@ -2,9 +2,9 @@
 
 ## Overview
 
-MapVault uses [Sentry](https://sentry.io) for crash reporting, performance monitoring, and session replay. The SDK is `@sentry/react-native` v8.x. The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
+MapVault uses [Sentry](https://sentry.io) for crash reporting and performance monitoring. The SDK is `@sentry/react-native` v8.x. The Sentry instance is hosted in the **EU** (Frankfurt, `de.sentry.io`) for GDPR compliance.
 
-Sentry is **disabled in development** and only runs in production builds.
+Sentry is **disabled in development** and only runs in preview and production builds.
 
 ## Sentry Account Details
 
@@ -45,14 +45,13 @@ The `Sentry.init()` call in `app/_layout.tsx`:
 
 ```typescript
 const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
+const appVariant = Constants.expoConfig?.extra?.appVariant as string | undefined;
 
 Sentry.init({
   dsn: sentryDsn,
   enabled: !__DEV__ && !!sentryDsn, // Production only, and only when DSN is present
+  environment: appVariant ?? "production", // 'development' | 'preview' | 'production'
   tracesSampleRate: 1,              // 100% of transactions (launch phase)
-  replaysSessionSampleRate: 1,      // 100% of sessions (launch phase)
-  replaysOnErrorSampleRate: 1,      // 100% of error sessions
-  integrations: [Sentry.mobileReplayIntegration()],
   spotlight: __DEV__,               // Local Sentry dev UI
 });
 ```
@@ -62,9 +61,8 @@ The DSN is **read from `Constants.expoConfig?.extra?.sentryDsn`**, not directly 
 | Setting | Value | Rationale |
 |---|---|---|
 | `enabled` | `!__DEV__ && !!sentryDsn` | Dev errors create noise; the DSN check makes the no-telemetry path explicit instead of relying on the SDK's silent-on-falsy-DSN behavior |
+| `environment` | `appVariant ?? "production"` | Tags events by build variant (`development` / `preview` / `production`) so preview test traffic can be filtered from production dashboards and alerts |
 | `tracesSampleRate` | `1` | 100% sampling during launch phase for maximum visibility; dial back to `0.2` as user volume grows |
-| `replaysSessionSampleRate` | `1` | 100% sampling during launch phase; dial back to `0.1` as user volume grows |
-| `replaysOnErrorSampleRate` | `1` | Always capture replay when an error occurs |
 | `spotlight` | `__DEV__` | Free local debugging UI in development |
 | `sendDefaultPii` | _(not set, defaults to false)_ | GDPR-safe — no automatic IP/device PII collection |
 
@@ -148,7 +146,7 @@ if (error) {
 
 ### 5. Plan sampling rate changes around user growth
 
-During launch, rates are at 100% (`tracesSampleRate: 1`, `replaysSessionSampleRate: 1`) to maximize visibility with minimal quota impact. Once user volume grows significantly (500+ daily active users), dial these back to `0.2` / `0.1` to balance visibility against quota usage.
+During launch, `tracesSampleRate` is at 100% to maximize visibility with minimal quota impact. Once user volume grows significantly (500+ daily active users), dial it back to `0.2` to balance visibility against quota usage.
 
 ### 6. Source maps are handled automatically
 
