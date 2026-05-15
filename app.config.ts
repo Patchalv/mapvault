@@ -166,6 +166,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     posthogHost: POSTHOG_HOST ?? "",
     revenueCatAppleApiKey: REVENUECAT_APPLE_KEY ?? "",
     revenueCatGoogleApiKey: REVENUECAT_GOOGLE_KEY ?? "",
+    appVariant: IS_DEV ? "development" : IS_PREVIEW ? "preview" : "production",
     eas: {
       projectId: "1ec7ed48-2f17-4c59-9e71-0f5aea7ea1f7",
     },

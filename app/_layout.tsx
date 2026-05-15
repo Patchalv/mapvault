@@ -23,14 +23,13 @@ WebBrowser.maybeCompleteAuthSession();
 const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
 const posthogApiKey = Constants.expoConfig?.extra?.posthogApiKey as string | undefined;
 const posthogHost = Constants.expoConfig?.extra?.posthogHost as string | undefined;
+const appVariant = Constants.expoConfig?.extra?.appVariant as string | undefined;
 
 Sentry.init({
   dsn: sentryDsn,
   enabled: !__DEV__ && !!sentryDsn,
+  environment: appVariant ?? "production",
   tracesSampleRate: 1,
-  replaysSessionSampleRate: 1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration()],
   spotlight: __DEV__,
 });
 
