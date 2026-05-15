@@ -23,7 +23,11 @@ WebBrowser.maybeCompleteAuthSession();
 const sentryDsn = Constants.expoConfig?.extra?.sentryDsn as string | undefined;
 const posthogApiKey = Constants.expoConfig?.extra?.posthogApiKey as string | undefined;
 const posthogHost = Constants.expoConfig?.extra?.posthogHost as string | undefined;
-const appVariant = Constants.expoConfig?.extra?.appVariant as string | undefined;
+const appVariant = Constants.expoConfig?.extra?.appVariant as
+  | "development"
+  | "preview"
+  | "production"
+  | undefined;
 
 Sentry.init({
   dsn: sentryDsn,
