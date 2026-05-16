@@ -1,0 +1,15 @@
+[mcp_servers.Sentry]
+url = "https://mcp.sentry.dev/mcp/patrick-alvarez/mapvault"
+
+[mcp_servers.context7]
+args = [
+    "-y",
+    "@upstash/context7-mcp@latest",
+]
+command = "npx"
+
+[mcp_servers.expo-mcp]
+url = "https://mcp.expo.dev/mcp"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp"
