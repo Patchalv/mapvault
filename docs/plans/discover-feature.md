@@ -1,6 +1,6 @@
 # PRD: Discover Feature
 
-**Status:** Ready for implementation
+**Status:** Product review — cost/compliance decisions needed before implementation
 **Date:** 2026-05-16
 **Author:** Design session with Patrick Alvarez
 **Revision:** v2 — post-review decisions baked in
@@ -11,7 +11,7 @@
 
 MapVault currently lets users save and browse their own recommended places. The main product PRD has historically positioned the app as "NOT a discovery engine" — every place was deliberately saved by you or someone you shared a map with.
 
-**Discover is a deliberate pivot from that line.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, and it ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get unlimited (subject to a daily cap to bound API cost). This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap.
+**Discover is a deliberate expansion of that line, not a replacement for the core curation product.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, and it ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get up to 50 searches per calendar day. This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap while keeping saved, shared, curated maps as the main product experience.
 
 **Action items outside this PRD:**
 - Update `docs/prd.md` to reframe "not a discovery engine" → "discovery is premium; the free tier is curation-only."
@@ -21,18 +21,18 @@ MapVault currently lets users save and browse their own recommended places. The 
 
 ## Goals
 
-- Surface a city in natural language ("best cocktail bars in Malasaña", "coffee near Reina Sofía") and show ranked results on a map.
-- Make Discover the **primary upgrade hook** for non-paying users: 5 lifetime free searches, then paywall.
+- Surface a city in natural language ("best cocktail bars in Malasaña", "coffee near Reina Sofía") and show Google Places results on a map with their Google ratings.
+- Make Discover a **major upgrade hook** for non-paying users: 5 lifetime free searches, then paywall.
 - Bound API spend so the feature is economically defensible at $9.99/year pricing.
-- One-tap save to the active map; no tags/notes required (we surface untagged saves via a new filter on the Places tab).
+- One-tap handoff from Discover into the existing Add place flow so users can save with normal MapVault context (map, tags, note, visited status) instead of creating a parallel untagged-save path.
 
 ## Out of Scope (v1)
 
 - "Search this area" re-query when the user pans the map
 - Filter chips (Open Now, Top Rated, price, category) on the result set
 - Photo carousel full-screen / pinch zoom
-- Saving with tags, notes, or visited status from Discover (added later from Places tab)
-- Card tray / scrollable result list
+- A bespoke Discover-only save flow. Discover hands off to the existing Add tab instead.
+- Card tray / scrollable result list. Intentionally excluded from v1 to get the feature live quickly; revisit after observing marker tap, search refinement, and save behavior.
 - Community data (places from other MapVault users)
 - Grayscale map effect behind the search overlay
 - Full accessibility pass (see Known Debt)
@@ -65,10 +65,11 @@ Renaming `app/(tabs)/explore/` → `app/(tabs)/places/` has fallout across the c
 ### Free tier
 - **5 lifetime Discover searches.** Counter never auto-resets. Admin can grant more manually for support cases.
 - 6th attempt → existing paywall (`router.push('/(tabs)/settings/paywall?trigger=discover_limit')`).
+- Paywall copy must make the entitlement explicit: free users get 5 total Discover searches to try the feature; premium users get 50 Discover searches per calendar day.
 
 ### Premium tier
-- **Unlimited searches**, soft-capped at **50/day** with a friendly "you're searching a lot — come back tomorrow" screen.
-- "Per day" semantics depend on the storage approach picked below — see open question.
+- **50 Discover searches per calendar day** with a friendly "you're searching a lot — come back tomorrow" screen once the cap is reached.
+- "Per day" means calendar day from the user's perspective. The implementation shape is up to the tech lead, but product copy must not describe this as "unlimited."
 
 ### Free-tier trial counter schema
 Add to `profiles`:
@@ -77,24 +78,24 @@ alter table profiles
   add column discover_searches_used     integer not null default 0,
   add column discover_searches_granted  integer not null default 5;
 ```
-- Decremented server-side only (Edge Function below); never trusted from the client.
+- Incremented server-side only (Edge Function below); never trusted from the client.
 - Admin tooling raises `discover_searches_granted`. `discover_searches_used` is monotonic and only reset manually if ever.
 - RLS: read-only to the user; write only via `security definer` Edge Function path.
 
-### Daily cap storage — open question for tech lead
+### Daily cap storage — implementation decision for tech lead
 
-The 50/day premium cap needs durable per-user usage tracking. Two reasonable shapes; the tech lead decides at implementation time based on what fits the broader Postgres conventions in the project.
+The 50/day premium cap needs durable per-user usage tracking. Product semantics are calendar-day based using the user's device timezone, sent with each Discover search request and stored with the usage record. If the client does not provide a timezone, fallback to UTC.
 
 **Option A — Two columns on `profiles`:**
 ```sql
 alter table profiles
   add column discover_searches_today      integer not null default 0,
-  add column discover_searches_today_date date    not null default current_date;
+  add column discover_searches_today_date text    not null default '<YYYY-MM-DD in user timezone>';
 ```
 - **Pros:** No new table. Constant-time read on every Discover call. Single-row update per search. Simplest mental model.
 - **Cons:**
-  - "Today" is timezone-dependent. UTC means a US user searching at 7pm and 9pm Tuesday counts as Tuesday for 7pm but Wednesday for 9pm. Either pick a timezone artifact or fix.
-  - Read-modify-write atomicity: must use single-statement `UPDATE ... SET used = CASE WHEN today_date = current_date THEN used + 1 ELSE 1 END, today_date = current_date` or a transaction. Two concurrent searches can race otherwise.
+  - Must compute the user's local calendar date from the client-provided timezone inside the Edge Function; database `current_date` is not sufficient because it uses the database/session timezone.
+  - Read-modify-write atomicity: must use single-statement `UPDATE ... SET used = CASE WHEN today_date = request_local_date THEN used + 1 ELSE 1 END, today_date = request_local_date` or a transaction. Two concurrent searches can race otherwise.
   - No historical data inside Postgres. Can't answer "how many searches this month" without PostHog.
 
 **Option B — New `discover_search_events` table:**
@@ -103,16 +104,18 @@ create table discover_search_events (
   id          bigserial primary key,
   user_id     uuid not null references profiles(id) on delete cascade,
   created_at  timestamptz not null default now(),
+  local_date  date not null,
+  time_zone   text not null,
   source      text not null check (source in ('free','premium'))
 );
 create index discover_search_events_user_recent_idx
   on discover_search_events (user_id, created_at desc);
 ```
-- Daily cap check: `SELECT count(*) FROM discover_search_events WHERE user_id = $1 AND created_at > now() - interval '24 hours'`.
-- **Pros:** Rolling 24h cap is native and timezone-free. Concurrency is trivial (just INSERT). Full history available for attribution when GCP spend spikes.
+- Daily cap check uses `local_date`, computed from the client-provided timezone for the request, not a rolling 24h window.
+- **Pros:** Concurrency is trivial (just INSERT). Full history available for attribution when GCP spend spikes.
 - **Cons:** Grows unbounded — needs a `pg_cron` prune (e.g., delete rows > 90 days). One new table, RLS policy, optional prune cron.
 
-Both options are workable. Decision should be made with the rest of the schema in mind (does `pg_cron` already run other prune jobs? Are there other rolling-window features planned?).
+Both options are workable. Decision should be made with the rest of the schema in mind (does `pg_cron` already run other prune jobs? Are there other usage-capped features planned?).
 
 ### Photo cap
 - Carousel shows **max 3 photos per place** regardless of how many Google returns.
@@ -120,8 +123,41 @@ Both options are workable. Decision should be made with the rest of the schema i
 ### Cost alerting
 - **Google Cloud daily $-budget alert** (single GCP alert). No app-side spend duplication for v1.
 
+### Cost model
+
+Current pricing assumption: Google Maps Platform pricing checked on 2026-05-16. Re-check before implementation because Places API SKU pricing can change.
+
+The planned field mask includes `places.rating`, `places.userRatingCount`, `places.priceLevel`, and `places.currentOpeningHours`. Per Google's Places data field pricing, these fields place the Text Search call in **Text Search Enterprise**, not Text Search Pro. Current global pricing:
+
+| SKU | Free monthly usage cap | Paid tier used for v1 modeling |
+|-----|------------------------|--------------------------------|
+| Places API Text Search Enterprise | 1,000 requests/month | $35 per 1,000 requests up to 100,000/month |
+| Places API Place Details Photos | 1,000 requests/month | $7 per 1,000 requests up to 100,000/month |
+
+Unit-cost assumptions after the free usage cap:
+- One successful Discover search = one Text Search Enterprise request = **$0.035/search**.
+- Opening a result sheet with photos requests up to 3 photo URLs. Google bills photo calls per photo request, so worst-case photo URL cost = **3 × $0.007 = $0.021/sheet open**.
+- A search that fails before Google returns successfully should not increment the user's trial/daily counter, but it may still create Google API cost depending on where the failure occurs.
+
+Illustrative monthly cost per active Discover user:
+
+| Usage pattern | Search cost | Photo cost assumption | Total monthly API cost |
+|---------------|-------------|-----------------------|------------------------|
+| Light: 5 searches/month, 2 photo sheet opens | $0.18 | $0.04 | $0.22 |
+| Expected: 20 searches/month, 5 photo sheet opens | $0.70 | $0.11 | $0.81 |
+| Heavy: 100 searches/month, 25 photo sheet opens | $3.50 | $0.53 | $4.03 |
+| Cap max: 50 searches/day for 30 days, 20 photo sheet opens | $52.50 | $0.42 | $52.92 |
+
+Business implication: at $9.99/year, Discover is economically viable only if typical premium usage stays low. The 50/day cap is a hard abuse/cost ceiling, not a margin-safe everyday entitlement. If median premium usage approaches 20+ searches/month or photo opens are high, revisit pricing, lower the daily cap, reduce the field mask, or introduce a higher-priced Discover tier.
+
+Cost controls required for v1:
+- Set a GCP budget alert before rollout.
+- Set per-method Google Places quota limits for Text Search and Place Photos, not just a budget alert.
+- Track successful searches and photo URL requests server-side by user and entitlement so spend spikes can be attributed without relying only on PostHog.
+- Revisit the field mask before build: removing `currentOpeningHours`, `priceLevel`, `rating`, and/or `userRatingCount` materially changes SKU economics, but also weakens the user experience.
+
 ### Pricing note
-At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/user/month, revisit pricing or introduce a "Discover Pro" tier.
+At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/user/month, revisit pricing, reduce the daily cap, reduce expensive fields, or introduce a "Discover Pro" tier.
 
 ---
 
@@ -137,20 +173,26 @@ At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/us
 {
   "query": "<user query, truncated to 200 chars>",
   "locationBias": { "latitude": 40.4168, "longitude": -3.7038 },  // optional; omitted if user denied location
-  "languageCode": "en" | "es"
+  "languageCode": "en" | "es",
+  "timeZone": "Europe/Madrid"
 }
 ```
-`locationBias` is optional — when the user has denied location permission, omit it and let Google rank without geographic bias.
+`locationBias` is optional — when the user has denied location permission, omit it and let Google return results without geographic bias.
+
+Implementation note: distinguish real user location from map-display fallback. If `useLocation()` falls back to Madrid for map centering, that fallback must not be sent as `locationBias`. Only send `locationBias` when the app has a real permission-backed device location.
+
+`timeZone` is required for authenticated clients and should be the device timezone from `Intl.DateTimeFormat().resolvedOptions().timeZone` or the closest Expo-compatible equivalent. It is used only for calendar-day cap enforcement. If omitted by an older client, the Edge Function falls back to UTC.
 
 **Flow:**
 1. Validate auth (`auth.getUser()`).
 2. Check user entitlement. If free:
    - Reject with `402 DISCOVER_TRIAL_EXHAUSTED` if `discover_searches_used >= discover_searches_granted`.
-   - Otherwise increment `discover_searches_used` atomically.
+   - Otherwise allow the request to proceed. Increment `discover_searches_used` atomically only after Google returns a successful response.
 3. If premium:
-   - Reject with `429 DISCOVER_DAILY_CAP` if usage in the last day ≥ 50. The "last day" computation depends on the storage shape chosen in the open question above (rolling-24h vs calendar-day-in-some-timezone).
-4. Call `POST https://places.googleapis.com/v1/places:searchText` with the field mask below.
-5. Map response to `DiscoverPlace[]`, return.
+   - Reject with `429 DISCOVER_DAILY_CAP` if usage for the relevant calendar day is ≥ 50.
+4. Call `POST https://places.googleapis.com/v1/places:searchText` with the field mask below and `maxResultCount: 20`.
+5. If Google returns successfully, record the successful search against the user's free trial or premium daily cap.
+6. Map response to `DiscoverPlace[]`, return.
 
 **Field mask (X-Goog-FieldMask):**
 ```
@@ -160,6 +202,8 @@ places.types,places.currentOpeningHours,places.utcOffsetMinutes,
 places.photos
 ```
 `places.photos` returns the full Photo object including `authorAttributions` — no need to enumerate subfields.
+
+**Result count:** v1 requests at most **20 places** from Google. This keeps map density, marker rendering cost, and user scanning effort bounded.
 
 ### `discover-photo-urls`
 **Path:** `supabase/functions/discover-photo-urls/index.ts`
@@ -274,7 +318,7 @@ Built on `Mapbox.MarkerView` for parity with the existing Places tab. Manual per
    - Hidden if no hours data.
 5. **Action row:**
    - **Directions** → `openDirections(latitude, longitude, name)` from `lib/directions.ts`. Reuses existing iOS app picker + Android `geo:` URL + Google Maps web fallback.
-   - **Save to map** — see Save Behavior below.
+   - **Save** — see Save Behavior below.
 6. **Photo carousel** — horizontal `FlatList`, `pagingEnabled`, ~200px height, no pagination dots in v1.
    - Max **3 photos** per place even if Google returns more.
    - Each photo has a **bottom-left attribution overlay**: small white text on translucent dark gradient showing `authorAttributions[].displayName`. Tap → `Linking.openURL(authorAttributions[0].uri)`.
@@ -284,17 +328,20 @@ Built on `Mapbox.MarkerView` for parity with the existing Places tab. Manual per
 
 ### Save behavior
 
-- Calls the existing `add-place` Edge Function with the active map ID, no tags, no note, `visited: false`.
-- Freemium 20-place limit is enforced server-side automatically.
+- Discover does **not** call the `add-place` Edge Function directly in v1.
+- Tapping **Save** opens the existing Add place save screen with the discovered place prefilled, e.g. `router.push({ pathname: '/(tabs)/add/save', params: { placeId, name, address, latitude, longitude, googleCategory, source: 'discover' } })`.
+- The Add flow remains the only place where the user confirms the target map, tags, note, and visited status. This keeps Discover as the finding surface and Add as the curation surface.
+- Add must skip its usual place-search/details lookup step for Discover-originated saves. Discover already has the required place ID, name, address, latitude, longitude, and category/type data, so the Add save screen should render directly with those values.
+- If required save data is missing from the Discover handoff, show an inline error and offer to return to Discover; do not perform a second Google lookup as a hidden fallback in v1.
+- Freemium 20-place limit remains enforced server-side by the existing `add-place` Edge Function when the Add flow submits.
 - **Button states** (computed from `useMapPlaces` data for the active map):
   - `activeMapId == null` → **disabled** (defensive; shouldn't occur in normal flow).
   - `useMapPlaces.isLoading` → **disabled** with loading style.
   - `useMapPlaces.isError` → **enabled** (fall back; Edge Function is conflict authority).
-  - Place already in active map → **"Already saved"** state, no Edge Function call.
-  - Otherwise → **"Save to map"** active.
-- On success: `react-native-toast-message` shows `t('discover.savedSuccess')`. Button transitions to "Already saved". **Invalidate `['map-places', activeMapId]`** so reopening the sheet (or returning to the Places tab) reflects the freshly saved state instead of stale `useMapPlaces` data.
-- On `FREEMIUM_LIMIT_EXCEEDED` (403): inline error + `t('discover.errorLimit')` linking to paywall.
-- On other error: inline error + `t('discover.errorSave')`.
+  - Place already in active map → **"Already saved"** state; tapping can optionally deep-link to the existing saved place in Places.
+  - Otherwise → **"Save"** active.
+- On successful handoff to Add, dismiss the Discover sheet and navigate to Add. Save success, freemium limit errors, tag validation, and note/visited handling stay owned by the existing Add flow.
+- Add flow should accept `source: 'discover'` so analytics can distinguish Discover-originated saves from normal Add searches.
 
 ### Place dedup scope
 "Already saved" is **scoped to the active map only**. The same Google place can be saved to multiple maps the user owns.
@@ -334,6 +381,8 @@ export interface DiscoverPlace {
 }
 ```
 
+Discover-to-Add handoff passes the existing fields needed by `add-place`: `id` as `googlePlaceId`, `name`, `formattedAddress`, `latitude`, `longitude`, and `primaryType`/first `types` value as `googleCategory`.
+
 ---
 
 ## Hook: `useDiscoverSearch`
@@ -344,14 +393,18 @@ export interface DiscoverPlace {
 function useDiscoverSearch() {
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const { location } = useLocation();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Round to 0.01° (~1km grid) for cache-friendliness
   const lat = location ? Math.round(location.latitude * 100) / 100 : null;
   const lng = location ? Math.round(location.longitude * 100) / 100 : null;
 
   const query = useQuery({
-    queryKey: ['discover', currentQuery, lat, lng],
-    queryFn: () => searchPlacesText(currentQuery!, location ?? undefined),
+    queryKey: ['discover', currentQuery, lat, lng, timeZone],
+    queryFn: () => searchPlacesText(currentQuery!, {
+      location: location ?? undefined,
+      timeZone,
+    }),
     enabled: !!currentQuery,
     // 5-min staleTime inherits from the global default; same query+rounded-location
     // within 5 min is a cache hit and does NOT decrement the trial counter
@@ -375,7 +428,7 @@ function useDiscoverSearch() {
 
 ## "Untagged" filter (Places tab scope creep)
 
-Discover saves create places with no tags. Without a way to find them, users who tag-filter heavily will "lose" their Discover saves.
+Discover-originated saves pass through the existing Add flow, where users can add tags before saving. Users can still intentionally save without tags, so the untagged filter remains useful as a cleanup and retrieval tool.
 
 **Change:**
 - Add an **"Untagged"** chip to `components/filter-sheet/...` for the Places tab.
@@ -401,7 +454,7 @@ Discover saves create places with no tags. Without a way to find them, users who
 "discover": {
   "searchPlaceholder": "I'm looking for...",
   "searchHint": "e.g. best coffee shop near me",
-  "saveToMap": "Save to map",
+  "save": "Save",
   "alreadySaved": "Already saved",
   "directions": "Directions",
   "open": "Open",
@@ -409,7 +462,6 @@ Discover saves create places with no tags. Without a way to find them, users who
   "closes": "Closes {{time}}",
   "opens": "Opens {{time}}",
   "reviews": "{{count}} reviews",
-  "savedSuccess": "Place saved to map",
   "noResults": "No results for \"{{query}}\". Try a different search.",
   "errorSearch": "Search failed. Please try again.",
   "errorSave": "Could not save place. Please try again.",
@@ -425,25 +477,38 @@ And add `filters.untagged: "Untagged"` to the existing `filters` namespace.
 
 ## Analytics
 
-New events via `track()` from `lib/analytics.ts`. Search instrumentation is **split into two events** because TanStack Query's cache-hit path short-circuits `queryFn` — there's no single moment that captures both "user intended a search" and "we got a result." Splitting also lets us measure incomplete searches (intent without completion) as a failure signal.
+New identified events via `track()` from `lib/analytics.ts`. Search instrumentation is **split into two events** because TanStack Query's cache-hit path short-circuits `queryFn` — there's no single moment that captures both "user intended a search" and "we got a result." Splitting also lets us measure incomplete searches (intent without completion) as a failure signal.
+
+Do **not** attach raw search query text to identified client analytics events. Query text may reveal sensitive intent, so user-linked events should measure behavior without storing the actual query.
 
 | Event | Properties | Fires when |
 |-------|-----------|------------|
-| `discover_search_submitted` | `query: string` (raw, truncated to 200) | Inside the hook's `search(q)` setter. Always fires — captures intent regardless of cache. |
-| `discover_search_completed` | `query: string`, `result_count: number`, `from_cache: boolean`, `latency_ms: number` | In a `useEffect` watching `query.dataUpdatedAt`. `from_cache` is `true` if `dataUpdatedAt` matches a ref-tracked baseline (i.e., the data wasn't refreshed by this submission). `latency_ms` is 0 on cache hits. |
-| `discover_result_tapped` | `place_name: string`, `rating: number \| null`, `place_id: string` | Marker tap. |
-| `discover_place_saved` | `place_name: string`, `map_id: string`, `place_id: string` | Save success from the sheet. |
-| `discover_directions_tapped` | `place_name: string`, `place_id: string` | Directions button tap. |
+| `discover_search_submitted` | `query_length: number`, `has_location_bias: boolean`, `language_code: 'en' \| 'es'` | Inside the hook's `search(q)` setter. Always fires — captures intent regardless of cache. |
+| `discover_search_completed` | `result_count: number`, `from_cache: boolean`, `latency_ms: number`, `has_location_bias: boolean`, `language_code: 'en' \| 'es'` | In a `useEffect` watching `query.dataUpdatedAt`. `from_cache` is `true` if `dataUpdatedAt` matches a ref-tracked baseline (i.e., the data wasn't refreshed by this submission). `latency_ms` is 0 on cache hits. |
+| `discover_result_tapped` | `rating: number \| null`, `has_photos: boolean`, `primary_type: string \| null` | Marker tap. Do not include `place_name`, `place_id`, address, or coordinates in identified analytics. |
+| `discover_save_started` | `rating: number \| null`, `has_photos: boolean`, `primary_type: string \| null` | User taps Save in the Discover sheet and is routed into Add. Do not include `place_name`, `place_id`, address, or coordinates in identified analytics. |
+| `discover_place_saved` | `map_id: string`, `source: 'discover'`, `rating: number \| null`, `primary_type: string \| null` | Save success from the Add flow with `source: 'discover'`. Do not include `place_name`, `place_id`, address, or coordinates in identified analytics. |
+| `discover_directions_tapped` | `rating: number \| null`, `primary_type: string \| null` | Directions button tap. Do not include `place_name`, `place_id`, address, or coordinates in identified analytics. |
 | `discover_cleared` | — | User taps ✕ on the pill. |
 | `discover_trial_exhausted` | — | Edge Function returns 402 for a free user. |
 | `discover_paywall_shown` | `trigger: 'trial_exhausted' \| 'save_limit'` | Paywall mounts via Discover trigger. |
 | `discover_daily_cap_hit` | — | Edge Function returns 429 for a premium user. |
 
-### PII / compliance
-The raw query is shipped to PostHog for product insight. Before ship:
-- Update privacy policy to disclose query collection.
-- Update iOS App Store privacy nutrition labels (Search History / User Content → linked to identity).
-- Confirm PostHog deletion is wired into the account-deletion flow.
+### Anonymous query analytics
+Raw query text may be useful for product insight, but it must not be tied to a MapVault user identity in v1.
+
+If raw query analytics are shipped:
+- Emit them server-side from `discover-search`, not from the client.
+- Do not include `user_id`, `map_id`, `profile_id`, PostHog identified `distinct_id`, device ID, email, or precise lat/lng.
+- Use an anonymous per-event `distinct_id` such as `crypto.randomUUID()` or a short-lived batch ID that cannot be joined back to a user.
+- Include only `query`, `query_length`, `language_code`, `has_location_bias`, coarse region if needed, `result_count`, `success`, and latency bucket.
+- Set a short retention expectation for raw query text and document it in the privacy policy before ship.
+- Do not use this anonymous query stream for user-level funnels. User-level funnels should rely on the identified events above, which omit raw query text.
+
+Before ship:
+- Update privacy policy to disclose Discover query processing and any anonymous query analytics.
+- Update iOS App Store privacy nutrition labels if raw query text is collected, even anonymously.
+- Confirm account deletion handles identified Discover analytics. Anonymous aggregate query events are not user-deletable because they are intentionally not linked to the user.
 
 ### Success metrics (day-1 tracking)
 1. **Daily Google Places API spend ($)** — via GCP billing console + daily budget alert.
@@ -459,6 +524,8 @@ The raw query is shipped to PostHog for product insight. Before ship:
 - Client checks on Discover tab render: if `false`, tab is hidden from `(tabs)/_layout.tsx`.
 - Deep-link into Discover when flag is off: redirect to a `t('discover.unavailable')` screen.
 - `lib/feature-flags.ts` gets a thin PostHog-flag wrapper (read-only on client).
+- Server-side enforcement is also required. `discover-search` and `discover-photo-urls` must check a server-controlled kill switch before making any Google API calls. If disabled, return `503 DISCOVER_DISABLED`.
+- Client flags are for UX. Server flags are for cost and abuse protection, because an authenticated user can still call an Edge Function directly with a valid JWT even if the tab is hidden.
 
 #### Flag loading behavior
 
@@ -499,6 +566,7 @@ app/(tabs)/
   _layout.tsx                          ← MODIFY: reorder tabs, set initialRouteName="places"
   explore/  → places/                  ← RENAME directory; update references
   places/index.tsx                     ← MODIFY: support "Untagged" filter
+  add/save.tsx                         ← MODIFY: accept `source=discover` and emit Discover-origin save analytics
   discover/
     _layout.tsx                        ← NEW: minimal stack layout
     index.tsx                          ← NEW: Discover screen (state machine)
@@ -537,7 +605,7 @@ types/
   index.ts                             ← MODIFY: DiscoverPlace, DiscoverPhoto
 
 metro.config.js                        ← MODIFY (if SVG transformer chosen)
-package.json                           ← MODIFY: react-native-svg-transformer, react-native-toast-message
+package.json                           ← MODIFY: react-native-svg-transformer if SVG transformer chosen
 locales/en.json                        ← MODIFY: discover + filters.untagged
 locales/es.json                        ← MODIFY: mirror
 docs/prd.md                            ← MODIFY: reframe "not a discovery engine"
@@ -551,10 +619,11 @@ Explicitly accepted gaps. Track for follow-up.
 
 1. **Accessibility.** No accessibility labels/roles, no reduce-motion handling, no VoiceOver focus management, marker hit targets <44pt. Revisit before scaling user base or hitting App Store accessibility review.
 2. **`lib/directions.ts`** uses `http://maps.apple.com/...` — should be `https://`. Non-blocking; fix on next pass through that file.
-3. **"Untagged" filter** is technically scope creep (touches Places tab) but is required to keep Discover-saved places discoverable.
+3. **"Untagged" filter** is technically scope creep (touches Places tab) but is useful for Discover-originated saves when users intentionally skip tags in the Add flow.
 4. **No retry-with-backoff** on Edge Function calls — users retry manually by tapping send again.
-5. **`regionCode` not passed** to Google Text Search. Acceptable for v1; revisit if international result ranking is poor.
-6. **Madrid hardcoded fallback** when location permission is denied (inherited from existing `useLocation()` / Explore behavior). Discover is the most location-sensitive surface, so this is now a more visible bug for any non-Spanish-market user. Track for a separate fix — either device-locale-aware fallback or a "Set your default city" preference.
+5. **`regionCode` not passed** to Google Text Search. Acceptable for v1; revisit if international result quality is poor.
+6. **Location denied/default city behavior.** Do not block search when location is denied. Instead, allow the user to search with explicit geography in the query ("coffee in Paris") and show a non-blocking prompt to enable location for better nearby results. If the map uses Madrid as a display fallback, do not send Madrid as `locationBias` unless the user is actually there.
+7. **Google Places attribution/compliance.** Needs further investigation before implementation continues. Confirm whether Google Places results, ratings, photos, and attribution can be displayed on a Mapbox map, what Google attribution is required beyond photo author attribution, and whether any European search-result ranking disclosures apply.
 
 ---
 
@@ -571,17 +640,18 @@ Explicitly accepted gaps. Track for follow-up.
 - [ ] Empty state: map centered on location, pill at top with MapVault logo + "I'm looking for...", no arrow.
 - [ ] Tap pill → overlay animates input to center, keyboard opens, send arrow fades in, hint visible.
 - [ ] Type "best coffee shop in Lavapiés" → tap send → spinner → overlay dismisses → 20 markers fit on map → pill shows query + ✕.
-- [ ] Tap a marker → marker enlarges → detail sheet opens with name, stars+rating+count, "Cafe · $$", "Open · Closes 22:00", Directions, Save to map, 3-photo carousel with attribution overlays.
+- [ ] Tap a marker → marker enlarges → detail sheet opens with name, stars+rating+count, "Cafe · $$", "Open · Closes 22:00", Directions, Save, 3-photo carousel with attribution overlays.
 - [ ] Tap photo attribution → opens browser to author URI.
 - [ ] Tap Directions → iOS picker if multiple nav apps, else opens Apple Maps directly.
-- [ ] Tap Save to map → toast "Place saved to map" → button updates to "Already saved".
-- [ ] Tap Save again → no Edge Function call (button is in already-saved state).
+- [ ] Tap Save → Discover sheet dismisses → Add save screen opens with place prefilled.
+- [ ] Complete Add flow with tags/note/visited as desired → place saves successfully.
+- [ ] Return to Discover → saved place shows "Already saved" for the active map.
 - [ ] Open Places tab → place appears.
 - [ ] Tap "Untagged" filter chip → newly saved place is in the result.
 - [ ] Return to Discover → tap ✕ on pill → returns to empty state, markers removed.
 
 ### Edge cases
-- [ ] Location permission denied → map shows Madrid default; search still works without location bias.
+- [ ] Location permission denied → map may show a fallback center, search still works without sending fallback coordinates as `locationBias`, and the UI shows a non-blocking prompt to enable location for better nearby results.
 - [ ] Google returns 0 results → overlay dismisses, banner shows "No results for '...'", pill keeps query.
 - [ ] Network error during search → overlay stays, inline error, send arrow restored, retry works.
 - [ ] Place has no photos → carousel hidden.
@@ -595,6 +665,7 @@ Explicitly accepted gaps. Track for follow-up.
 - [ ] **Premium daily cap:** set `discover_searches_used` near 50 (or fake daily counter) → confirm soft-cap message renders.
 - [ ] **Admin grant:** raise `discover_searches_granted` to 10 manually → confirm trial counter respects the new ceiling.
 - [ ] **Kill switch:** toggle PostHog `discover_enabled` off → confirm Discover tab disappears + deep-link shows fallback.
+- [ ] **Server kill switch:** disable the server-side Discover flag → direct calls to `discover-search` and `discover-photo-urls` return `503 DISCOVER_DISABLED` before any Google API request.
 - [ ] **Internal-only:** non-internal test account during week 1 should NOT see the Discover tab.
 - [ ] **Cache:** repeat same search within 5 min → confirm no `discover-search` Edge Function invocation in Supabase logs, counter unchanged.
 - [ ] **GCP budget alert:** simulate elevated daily spend → confirm GCP alert email arrives at configured threshold.
@@ -607,6 +678,7 @@ Explicitly accepted gaps. Track for follow-up.
 
 ### Compliance
 - [ ] Privacy policy updated with query-collection disclosure before release.
-- [ ] iOS App Store privacy nutrition labels updated on next submission (Search History / User Content → linked to identity).
+- [ ] iOS App Store privacy nutrition labels updated on next submission based on final analytics design. If raw query text is only collected anonymously, confirm whether it is disclosed as not linked to identity.
 - [ ] Account deletion → confirm PostHog data for that distinct_id is purged.
+- [ ] Google Places attribution/compliance investigation completed before implementation continues.
 - [ ] Photo attribution `displayName` visible on every photo; tap opens author URI.
