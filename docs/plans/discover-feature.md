@@ -11,7 +11,7 @@
 
 MapVault currently lets users save and browse their own recommended places. The main product PRD has historically positioned the app as "NOT a discovery engine" — every place was deliberately saved by you or someone you shared a map with.
 
-**Discover is a deliberate expansion of that line, not a replacement for the core curation product.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, displayed on a Google Map in the Discover tab. It ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get up to 50 searches per calendar day. This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap while keeping saved, shared, curated maps as the main product experience.
+**Discover is a deliberate expansion of that line, not a replacement for the core curation product.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, displayed on a Google Map in the Discover tab. It ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get up to 100 searches per calendar month. This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap while keeping saved, shared, curated maps as the main product experience.
 
 **Map provider decision:** Discover uses Google Maps, not Mapbox, because Google Places API results displayed on a map must be shown on a Google Map with proper attribution. The existing Places tab can continue using Mapbox for saved MapVault places. This means MapVault will have two map surfaces:
 - **Discover:** Google Map + Google Places results.
@@ -69,11 +69,11 @@ Renaming `app/(tabs)/explore/` → `app/(tabs)/places/` has fallout across the c
 ### Free tier
 - **5 lifetime Discover searches.** Counter never auto-resets. Admin can grant more manually for support cases.
 - 6th attempt → existing paywall (`router.push('/(tabs)/settings/paywall?trigger=discover_limit')`).
-- Paywall copy must make the entitlement explicit: free users get 5 total Discover searches to try the feature; premium users get 50 Discover searches per calendar day.
+- Paywall copy must make the entitlement explicit: free users get 5 total Discover searches to try the feature; premium users get 100 Discover searches per calendar month.
 
 ### Premium tier
-- **50 Discover searches per calendar day** with a friendly "you're searching a lot — come back tomorrow" screen once the cap is reached.
-- "Per day" means calendar day from the user's perspective. The implementation shape is up to the tech lead, but product copy must not describe this as "unlimited."
+- **100 Discover searches per calendar month** with a friendly "you're searching a lot — come back next month" screen once the cap is reached.
+- "Per month" means calendar month from the user's perspective. Use the user's device timezone, sent with each Discover search request, to derive the local month. If the client does not provide a timezone, fallback to UTC. Product copy must not describe Discover as "unlimited."
 
 ### Free-tier trial counter schema
 Add to `profiles`:
@@ -86,40 +86,50 @@ alter table profiles
 - Admin tooling raises `discover_searches_granted`. `discover_searches_used` is monotonic and only reset manually if ever.
 - RLS: read-only to the user; write only via `security definer` Edge Function path.
 
-### Daily cap storage — implementation decision for tech lead
+### Monthly cap storage and usage measurement
 
-The 50/day premium cap needs durable per-user usage tracking. Product semantics are calendar-day based using the user's device timezone, sent with each Discover search request and stored with the usage record. If the client does not provide a timezone, fallback to UTC.
+The 100/month premium cap needs durable per-user usage tracking. This is also required for pricing review: MapVault must be able to answer "how many successful Discover searches did each user run this month?" without relying only on PostHog or Google Cloud billing aggregates.
 
-**Option A — Two columns on `profiles`:**
-```sql
-alter table profiles
-  add column discover_searches_today      integer not null default 0,
-  add column discover_searches_today_date text    not null default '<YYYY-MM-DD in user timezone>';
-```
-- **Pros:** No new table. Constant-time read on every Discover call. Single-row update per search. Simplest mental model.
-- **Cons:**
-  - Must compute the user's local calendar date from the client-provided timezone inside the Edge Function; database `current_date` is not sufficient because it uses the database/session timezone.
-  - Read-modify-write atomicity: must use single-statement `UPDATE ... SET used = CASE WHEN today_date = request_local_date THEN used + 1 ELSE 1 END, today_date = request_local_date` or a transaction. Two concurrent searches can race otherwise.
-  - No historical data inside Postgres. Can't answer "how many searches this month" without PostHog.
+**Decision: use a `discover_search_events` ledger table in v1.** A two-column counter on `profiles` is simpler, but it cannot support per-user monthly economics, support audits, or spend attribution when Google Cloud costs spike.
 
-**Option B — New `discover_search_events` table:**
 ```sql
 create table discover_search_events (
   id          bigserial primary key,
   user_id     uuid not null references profiles(id) on delete cascade,
   created_at  timestamptz not null default now(),
   local_date  date not null,
+  local_month text not null, -- YYYY-MM in the request timezone
   time_zone   text not null,
   source      text not null check (source in ('free','premium'))
 );
-create index discover_search_events_user_recent_idx
-  on discover_search_events (user_id, created_at desc);
+create index discover_search_events_user_month_idx
+  on discover_search_events (user_id, local_month, created_at desc);
+create index discover_search_events_month_idx
+  on discover_search_events (local_month, created_at desc);
 ```
-- Daily cap check uses `local_date`, computed from the client-provided timezone for the request, not a rolling 24h window.
-- **Pros:** Concurrency is trivial (just INSERT). Full history available for attribution when GCP spend spikes.
-- **Cons:** Grows unbounded — needs a `pg_cron` prune (e.g., delete rows > 90 days). One new table, RLS policy, optional prune cron.
 
-Both options are workable. Decision should be made with the rest of the schema in mind (does `pg_cron` already run other prune jobs? Are there other usage-capped features planned?).
+- Monthly cap check counts successful premium rows for `(user_id, local_month)`, where `local_month` is computed from the client-provided timezone for the request, not a rolling 30-day window.
+- Insert a row only after Google returns a successful Text Search response. Rejected searches, validation failures, auth failures, and client-side cache hits do not consume the MapVault allowance.
+- Track free-trial successful searches in this table too (`source = 'free'`) even though `profiles.discover_searches_used` remains the enforcement counter. This keeps launch-month economics visible across free and premium cohorts.
+- Retain at least 13 months of rows so pricing decisions can use monthly cohorts and seasonality. If table growth becomes material, add a `pg_cron` prune after the retention window.
+- Create an internal SQL/reporting query for:
+  - total Discover searches/month;
+  - average and p95 searches per premium user/month;
+  - premium users at 80+ and 100 searches/month;
+  - free trial searches/month;
+  - estimated Google search cost after the pooled monthly free cap.
+
+**Rejected alternative — Two columns on `profiles`:**
+```sql
+alter table profiles
+  add column discover_searches_this_month       integer not null default 0,
+  add column discover_searches_this_month_key   text    not null default '<YYYY-MM in user timezone>';
+```
+- **Pros:** No new table. Constant-time read on every Discover call. Single-row update per search. Simplest mental model.
+- **Cons:**
+  - Must compute the user's local calendar month from the client-provided timezone inside the Edge Function; database `current_date` is not sufficient because it uses the database/session timezone.
+  - Read-modify-write atomicity: must use a single-statement update or a transaction. Two concurrent searches can race otherwise.
+  - No historical data inside Postgres. Can't answer "how many searches per user this month" without PostHog.
 
 ### Photo cap
 - Carousel shows **max 3 photos per place** regardless of how many Google returns.
@@ -129,7 +139,15 @@ Both options are workable. Decision should be made with the rest of the schema i
 
 ### Cost model
 
-Current pricing assumption: Google Maps Platform pricing checked on 2026-05-16. Re-check before implementation because Places API SKU pricing can change.
+Current pricing assumption: Google Maps Platform global pricing checked on 2026-05-16 against:
+- Google Maps Platform pricing overview: https://developers.google.com/maps/billing-and-pricing/overview
+- Google Maps Platform global price list: https://developers.google.com/maps/billing-and-pricing/pricing
+- Places API usage and billing: https://developers.google.com/maps/documentation/places/web-service/usage-and-billing
+- Text Search (New) field mask docs: https://developers.google.com/maps/documentation/places/web-service/text-search
+
+Re-check before implementation because Places API SKU pricing can change. Google's pricing docs were last updated 2026-05-12 UTC at the time of this review.
+
+Google Maps Platform now uses per-SKU monthly free usage caps. The old blanket $200/month Google Maps Platform credit was replaced on 2025-03-01. Free usage resets on the first day of each month at midnight Pacific time and is pooled at the billing-account/SKU level, not per app user.
 
 The planned field mask includes `places.rating`, `places.userRatingCount`, `places.priceLevel`, and `places.currentOpeningHours`. Per Google's Places data field pricing, these fields place the Text Search call in **Text Search Enterprise**, not Text Search Pro. Current global pricing:
 
@@ -137,13 +155,13 @@ The planned field mask includes `places.rating`, `places.userRatingCount`, `plac
 |-----|------------------------|--------------------------------|
 | Places API Text Search Enterprise | 1,000 requests/month | $35 per 1,000 requests up to 100,000/month |
 | Places API Place Details Photos | 1,000 requests/month | $7 per 1,000 requests up to 100,000/month |
-| Maps SDK for iOS / Android | See current Google Maps Platform pricing and SKU behavior | Validate during tech review; avoid map IDs/custom cloud styling in v1 unless needed |
+| Maps SDK for iOS / Android | Unlimited | Current global price list shows no paid tier for native Maps SDK map loads |
 
 Unit-cost assumptions after the free usage cap:
 - One successful Discover search = one Text Search Enterprise request = **$0.035/search**.
 - Opening a result sheet with photos requests up to 3 photo URLs. Google bills photo calls per photo request, so worst-case photo URL cost = **3 × $0.007 = $0.021/sheet open**.
-- Loading the Google Map in the Discover tab may generate Google Maps SDK map-load SKU usage depending on SDK configuration. Tech lead must validate current billing behavior for the chosen React Native Google Maps integration before implementation; v1 should avoid Google Map IDs, cloud-based styling, Street View, and other features that could move map usage to a paid or higher-priced SKU.
-- A search that fails before Google returns successfully should not increment the user's trial/daily counter, but it may still create Google API cost depending on where the failure occurs.
+- Loading the Google Map in the Discover tab should not create marginal map-load cost if the chosen React Native integration uses the native Maps SDK SKU. Tech lead must validate that the implementation does not accidentally use Maps JavaScript API, Dynamic Maps, Map Tiles API, Street View, cloud styling/features, or other paid SKUs.
+- A search that fails before Google returns successfully should not increment the user's trial/monthly counter, but it may still create Google API cost depending on where the failure occurs.
 
 Illustrative monthly cost per active Discover user:
 
@@ -151,20 +169,29 @@ Illustrative monthly cost per active Discover user:
 |---------------|-------------|-----------------------|------------------------|
 | Light: 5 searches/month, 2 photo sheet opens | $0.18 | $0.04 | $0.22 |
 | Expected: 20 searches/month, 5 photo sheet opens | $0.70 | $0.11 | $0.81 |
-| Heavy: 100 searches/month, 25 photo sheet opens | $3.50 | $0.53 | $4.03 |
-| Cap max: 50 searches/day for 30 days, 20 photo sheet opens | $52.50 | $0.42 | $52.92 |
+| Cap max: 100 searches/month, 25 photo sheet opens | $3.50 | $0.53 | $4.03 |
+| Cap max with every search opening 3 photos | $3.50 | $2.10 | $5.60 |
 
-Business implication: at $9.99/year, Discover is economically viable only if typical premium usage stays low. The 50/day cap is a hard abuse/cost ceiling, not a margin-safe everyday entitlement. If median premium usage approaches 20+ searches/month or photo opens are high, revisit pricing, lower the daily cap, reduce the field mask, or introduce a higher-priced Discover tier.
+Launch-stage free-cap implication: with 2 premium users capped at 100 searches/month and 30 free users each using all 5 lifetime trial searches in the same month, total search volume is only 350 Text Search requests. That stays fully inside Google's 1,000/month free Text Search Enterprise cap. Even if all 350 searches opened 3 photo URLs, that would be 1,050 photo requests, creating only 50 paid photo requests = $0.35.
+
+Business implication: at $9.99/year, Discover is economically viable only if typical premium usage stays low or total usage remains covered by the pooled Google free caps. A premium user who actually uses all 100 searches/month costs $3.50/month in search requests alone after the pooled free cap is exhausted, while $9.99/year produces roughly $0.83/month gross before app store fees. The 100/month cap is a hard abuse ceiling, not a margin-safe everyday entitlement. If average premium usage approaches 20+ searches/month, or photo opens are high, revisit pricing, lower the monthly cap, reduce the field mask, or introduce a higher-priced Discover tier.
+
+Pricing review triggers:
+- Total Discover searches exceed 750/month, because the app is approaching the pooled 1,000/month free Text Search Enterprise cap.
+- Average premium Discover usage exceeds 20 searches/user/month for two consecutive months.
+- More than 10% of premium users reach 80+ searches/month.
+- Photo media requests exceed 750/month or photo costs begin to exceed search costs.
+- Discover-related Google API cost exceeds 20% of monthly premium subscription revenue.
 
 Cost controls required for v1:
 - Set a GCP budget alert before rollout.
 - Set per-method Google Places quota limits for Text Search and Place Photos, not just a budget alert.
-- Set or review Maps SDK quotas/alerts for iOS and Android after the Google Maps integration is chosen.
-- Track successful searches and photo URL requests server-side by user and entitlement so spend spikes can be attributed without relying only on PostHog.
+- Validate that the Google Maps integration uses the native Maps SDK SKU and does not trigger paid map-rendering SKUs.
+- Track successful searches and photo URL requests server-side by user, local month, and entitlement so spend spikes can be attributed without relying only on PostHog.
 - Revisit the field mask before build: removing `currentOpeningHours`, `priceLevel`, `rating`, and/or `userRatingCount` materially changes SKU economics, but also weakens the user experience.
 
 ### Pricing note
-At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/user/month, revisit pricing, reduce the daily cap, reduce expensive fields, or introduce a "Discover Pro" tier.
+At $9.99/year, the API margin is thin once the pooled Google free caps are exceeded. If Discover usage exceeds ~20 searches/premium user/month, revisit pricing, reduce the monthly cap, reduce expensive fields, or introduce a "Discover Pro" tier.
 
 ---
 
@@ -173,7 +200,7 @@ At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/us
 ### `discover-search`
 **Path:** `supabase/functions/discover-search/index.ts`
 
-**Purpose:** the only path through which Google Places Text Search is called. Hosts the trial counter, daily cap, and feature flag check. Keeps the Google API key out of the binary.
+**Purpose:** the only path through which Google Places Text Search is called. Hosts the trial counter, monthly cap, usage ledger, and feature flag check. Keeps the Google API key out of the binary.
 
 **Request body:**
 ```json
@@ -188,7 +215,7 @@ At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/us
 
 Implementation note: distinguish real user location from map-display fallback. If `useLocation()` falls back to Madrid for map centering, that fallback must not be sent as `locationBias`. Only send `locationBias` when the app has a real permission-backed device location.
 
-`timeZone` is required for authenticated clients and should be the device timezone from `Intl.DateTimeFormat().resolvedOptions().timeZone` or the closest Expo-compatible equivalent. It is used only for calendar-day cap enforcement. If omitted by an older client, the Edge Function falls back to UTC.
+`timeZone` is required for authenticated clients and should be the device timezone from `Intl.DateTimeFormat().resolvedOptions().timeZone` or the closest Expo-compatible equivalent. It is used only for calendar-month cap enforcement. If omitted by an older client, the Edge Function falls back to UTC.
 
 Google Maps SDK configuration lives in the native app, not in this request body. Keep Maps SDK keys restricted by platform bundle ID/package name.
 
@@ -198,9 +225,9 @@ Google Maps SDK configuration lives in the native app, not in this request body.
    - Reject with `402 DISCOVER_TRIAL_EXHAUSTED` if `discover_searches_used >= discover_searches_granted`.
    - Otherwise allow the request to proceed. Increment `discover_searches_used` atomically only after Google returns a successful response.
 3. If premium:
-   - Reject with `429 DISCOVER_DAILY_CAP` if usage for the relevant calendar day is ≥ 50.
+   - Reject with `429 DISCOVER_MONTHLY_CAP` if successful premium searches for the relevant local calendar month are ≥ 100.
 4. Call `POST https://places.googleapis.com/v1/places:searchText` with the field mask below and `maxResultCount: 20`.
-5. If Google returns successfully, record the successful search against the user's free trial or premium daily cap.
+5. If Google returns successfully, record the successful search against the user's free trial or premium monthly cap by inserting a `discover_search_events` row.
 6. Map response to `DiscoverPlace[]`, return.
 
 **Field mask (X-Goog-FieldMask):**
@@ -238,9 +265,11 @@ places.photos
 Client renders via plain `<Image source={{ uri }}>`. No Google API key client-side.
 
 ### Migration
-**New file:** `supabase/migrations/<timestamp>_add_discover_search_counter.sql`
-- Adds the two columns above.
-- RLS: user can `select` own row including the new columns; only the Edge Function (service role) can `update` them.
+**New file:** `supabase/migrations/<timestamp>_add_discover_usage_tracking.sql`
+- Adds the two free-tier counter columns to `profiles`.
+- Creates `discover_search_events` and indexes from the monthly usage ledger section.
+- RLS: user can `select` own profile row including the new free-tier columns. Usage-event reads should be restricted to the service role/admin tooling unless a user-facing usage screen is added later.
+- Writes happen only from the Edge Function/service-role path after a successful Google Text Search response.
 
 ---
 
@@ -296,7 +325,7 @@ After a successful search:
 | **Tab switch** | User leaves Discover with overlay open | Overlay + keyboard dismiss silently. Returning shows last persisted state (empty or results). |
 | **Clear (✕)** | Tap ✕ on pill or call `clear()` | Single shared code path. Resets `currentQuery`, results, markers; returns to State 1. |
 | **Trial exhausted** | Edge Function returns `402` | Spinner stops → overlay dismisses with reverse spring → `router.push('/(tabs)/settings/paywall?trigger=discover_limit')`. Don't route while the overlay is mounted — sequence matters to avoid layering glitches. |
-| **Daily cap (premium)** | Edge Function returns `429` | Same dismiss sequence as above, then show `t('discover.dailyCap')` as an inline banner on the map (not a separate modal). |
+| **Monthly cap (premium)** | Edge Function returns `429` | Same dismiss sequence as above, then show `t('discover.monthlyCap')` as an inline banner on the map (not a separate modal). |
 
 ---
 
@@ -484,7 +513,7 @@ Discover-originated saves pass through the existing Add flow, where users can ad
   "errorSearch": "Search failed. Please try again.",
   "errorSave": "Could not save place. Please try again.",
   "errorLimit": "You've reached the free plan limit. Upgrade to save more places.",
-  "dailyCap": "You're searching a lot today. Come back tomorrow.",
+  "monthlyCap": "You've used your Discover searches for this month. Come back next month.",
   "unavailable": "Discover is temporarily unavailable. Please try again later."
 }
 ```
@@ -510,7 +539,7 @@ Do **not** attach raw search query text to identified client analytics events. Q
 | `discover_cleared` | — | User taps ✕ on the pill. |
 | `discover_trial_exhausted` | — | Edge Function returns 402 for a free user. |
 | `discover_paywall_shown` | `trigger: 'trial_exhausted' \| 'save_limit'` | Paywall mounts via Discover trigger. |
-| `discover_daily_cap_hit` | — | Edge Function returns 429 for a premium user. |
+| `discover_monthly_cap_hit` | — | Edge Function returns 429 for a premium user. |
 
 ### Anonymous query analytics
 Raw query text may be useful for product insight, but it must not be tied to a MapVault user identity in v1.
@@ -573,7 +602,7 @@ If PostHog flag fetch fails entirely on first install (network down), treat as `
 ### Kill criteria
 - Daily API spend exceeds the GCP budget alert threshold without explanation.
 - Discover-related crash rate via Sentry > 1% of sessions.
-- Premium daily-cap complaints exceed a manual support threshold.
+- Premium monthly-cap complaints exceed a manual support threshold.
 
 ---
 
@@ -615,9 +644,9 @@ lib/
 app.config.ts                          ← MODIFY: add Google Maps SDK keys/config plugin for chosen RN Google Maps library
 supabase/
   migrations/
-    <ts>_add_discover_search_counter.sql   ← NEW
+    <ts>_add_discover_usage_tracking.sql   ← NEW
   functions/
-    discover-search/index.ts           ← NEW: Text Search proxy + trial counter
+    discover-search/index.ts           ← NEW: Text Search proxy + trial counter + monthly usage ledger
     discover-photo-urls/index.ts       ← NEW: photo URL resolver
 
 types/
@@ -693,7 +722,7 @@ Explicitly accepted gaps. Track for follow-up.
 
 ### Freemium / cost / rollout
 - [ ] **Trial counter:** new free account → 5 searches → 6th attempt → paywall trigger fires; `profiles.discover_searches_used = 5`.
-- [ ] **Premium daily cap:** set `discover_searches_used` near 50 (or fake daily counter) → confirm soft-cap message renders.
+- [ ] **Premium monthly cap:** insert 100 successful premium `discover_search_events` rows for the current local month → confirm soft-cap message renders on the next search.
 - [ ] **Admin grant:** raise `discover_searches_granted` to 10 manually → confirm trial counter respects the new ceiling.
 - [ ] **Kill switch:** toggle PostHog `discover_enabled` off → confirm Discover tab disappears + deep-link shows fallback.
 - [ ] **Server kill switch:** disable the server-side Discover flag → direct calls to `discover-search` and `discover-photo-urls` return `503 DISCOVER_DISABLED` before any Google API request.
