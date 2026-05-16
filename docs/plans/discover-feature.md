@@ -1,6 +1,6 @@
 # PRD: Discover Feature
 
-**Status:** Product review — cost/compliance decisions needed before implementation
+**Status:** Ready for tech-lead review — Google Maps implementation path
 **Date:** 2026-05-16
 **Author:** Design session with Patrick Alvarez
 **Revision:** v2 — post-review decisions baked in
@@ -11,7 +11,11 @@
 
 MapVault currently lets users save and browse their own recommended places. The main product PRD has historically positioned the app as "NOT a discovery engine" — every place was deliberately saved by you or someone you shared a map with.
 
-**Discover is a deliberate expansion of that line, not a replacement for the core curation product.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, and it ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get up to 50 searches per calendar day. This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap while keeping saved, shared, curated maps as the main product experience.
+**Discover is a deliberate expansion of that line, not a replacement for the core curation product.** It introduces exploratory, natural-language place search powered by the Google Places Text Search API, displayed on a Google Map in the Discover tab. It ships as a **premium-tier feature**. Free users get a 5-search lifetime trial as an upgrade hook; premium users get up to 50 searches per calendar day. This expands MapVault's value prop and gives premium a second hook beyond the existing 20-place save cap while keeping saved, shared, curated maps as the main product experience.
+
+**Map provider decision:** Discover uses Google Maps, not Mapbox, because Google Places API results displayed on a map must be shown on a Google Map with proper attribution. The existing Places tab can continue using Mapbox for saved MapVault places. This means MapVault will have two map surfaces:
+- **Discover:** Google Map + Google Places results.
+- **Places:** existing Mapbox map + saved MapVault places.
 
 **Action items outside this PRD:**
 - Update `docs/prd.md` to reframe "not a discovery engine" → "discovery is premium; the free tier is curation-only."
@@ -21,7 +25,7 @@ MapVault currently lets users save and browse their own recommended places. The 
 
 ## Goals
 
-- Surface a city in natural language ("best cocktail bars in Malasaña", "coffee near Reina Sofía") and show Google Places results on a map with their Google ratings.
+- Surface a city in natural language ("best cocktail bars in Malasaña", "coffee near Reina Sofía") and show Google Places results on a Google Map with their Google ratings.
 - Make Discover a **major upgrade hook** for non-paying users: 5 lifetime free searches, then paywall.
 - Bound API spend so the feature is economically defensible at $9.99/year pricing.
 - One-tap handoff from Discover into the existing Add place flow so users can save with normal MapVault context (map, tags, note, visited status) instead of creating a parallel untagged-save path.
@@ -34,7 +38,7 @@ MapVault currently lets users save and browse their own recommended places. The 
 - A bespoke Discover-only save flow. Discover hands off to the existing Add tab instead.
 - Card tray / scrollable result list. Intentionally excluded from v1 to get the feature live quickly; revisit after observing marker tap, search refinement, and save behavior.
 - Community data (places from other MapVault users)
-- Grayscale map effect behind the search overlay
+- Custom Google Map styling that attempts to visually match Mapbox exactly
 - Full accessibility pass (see Known Debt)
 
 ---
@@ -133,10 +137,12 @@ The planned field mask includes `places.rating`, `places.userRatingCount`, `plac
 |-----|------------------------|--------------------------------|
 | Places API Text Search Enterprise | 1,000 requests/month | $35 per 1,000 requests up to 100,000/month |
 | Places API Place Details Photos | 1,000 requests/month | $7 per 1,000 requests up to 100,000/month |
+| Maps SDK for iOS / Android | See current Google Maps Platform pricing and SKU behavior | Validate during tech review; avoid map IDs/custom cloud styling in v1 unless needed |
 
 Unit-cost assumptions after the free usage cap:
 - One successful Discover search = one Text Search Enterprise request = **$0.035/search**.
 - Opening a result sheet with photos requests up to 3 photo URLs. Google bills photo calls per photo request, so worst-case photo URL cost = **3 × $0.007 = $0.021/sheet open**.
+- Loading the Google Map in the Discover tab may generate Google Maps SDK map-load SKU usage depending on SDK configuration. Tech lead must validate current billing behavior for the chosen React Native Google Maps integration before implementation; v1 should avoid Google Map IDs, cloud-based styling, Street View, and other features that could move map usage to a paid or higher-priced SKU.
 - A search that fails before Google returns successfully should not increment the user's trial/daily counter, but it may still create Google API cost depending on where the failure occurs.
 
 Illustrative monthly cost per active Discover user:
@@ -153,6 +159,7 @@ Business implication: at $9.99/year, Discover is economically viable only if typ
 Cost controls required for v1:
 - Set a GCP budget alert before rollout.
 - Set per-method Google Places quota limits for Text Search and Place Photos, not just a budget alert.
+- Set or review Maps SDK quotas/alerts for iOS and Android after the Google Maps integration is chosen.
 - Track successful searches and photo URL requests server-side by user and entitlement so spend spikes can be attributed without relying only on PostHog.
 - Revisit the field mask before build: removing `currentOpeningHours`, `priceLevel`, `rating`, and/or `userRatingCount` materially changes SKU economics, but also weakens the user experience.
 
@@ -182,6 +189,8 @@ At $9.99/year, the API margin is thin. If Discover usage exceeds ~20 searches/us
 Implementation note: distinguish real user location from map-display fallback. If `useLocation()` falls back to Madrid for map centering, that fallback must not be sent as `locationBias`. Only send `locationBias` when the app has a real permission-backed device location.
 
 `timeZone` is required for authenticated clients and should be the device timezone from `Intl.DateTimeFormat().resolvedOptions().timeZone` or the closest Expo-compatible equivalent. It is used only for calendar-day cap enforcement. If omitted by an older client, the Edge Function falls back to UTC.
+
+Google Maps SDK configuration lives in the native app, not in this request body. Keep Maps SDK keys restricted by platform bundle ID/package name.
 
 **Flow:**
 1. Validate auth (`auth.getUser()`).
@@ -239,9 +248,18 @@ Client renders via plain `<Image source={{ uri }}>`. No Google API key client-si
 
 Three visual states.
 
+### Map implementation
+
+- Discover uses a Google Map, not `@rnmapbox/maps`.
+- Existing Places tab remains on Mapbox; do not refactor the saved-places map as part of this feature.
+- Tech lead should choose the React Native Google Maps integration. Default candidate: `react-native-maps` with `provider={PROVIDER_GOOGLE}` and an Expo/EAS-compatible config plugin.
+- Google Maps attribution/logo and any provider attribution must remain visible and unobscured by the search pill, overlays, bottom sheet, safe areas, or tab bar.
+- Avoid Google Map IDs/custom cloud styling in v1 unless the tech lead confirms billing and setup implications. Use the default Google map style, with only normal camera/marker controls.
+- Do not place Google Places content on the existing Mapbox map. Discover results live only on the Google Map surface.
+
 ### State 1 — Empty (default)
 
-- Full-screen Mapbox map centered on user's current location (reuse `useLocation()`).
+- Full-screen Google Map centered on user's current location (reuse `useLocation()`).
 - Floating **pill search bar** pinned near the top:
   - **Left:** MapVault logo SVG at 20-24px (see Brand Asset).
   - **Center:** `t('discover.searchPlaceholder')` → "I'm looking for…"
@@ -262,7 +280,7 @@ Triggered on pill tap:
 
 After a successful search:
 - Overlay dismisses with reverse spring.
-- Map zooms/pans to fit all result markers (`Camera` with `bounds` prop).
+- Google Map zooms/pans to fit all result markers using the chosen map component's camera/bounds API.
 - **Search pill** at the top shows the current query with `✕` on the right to clear back to empty.
 - Result markers rendered (see Markers).
 - Tapping a marker opens the Place Detail Sheet.
@@ -284,7 +302,7 @@ After a successful search:
 
 ## Markers
 
-**New component:** `components/discover-markers/discover-markers.tsx`. Do not reuse `MapMarkers`.
+**New component:** `components/discover-markers/discover-markers.tsx`. Do not reuse `MapMarkers`; the existing component is Mapbox-specific.
 
 - **Shape:** 32px solid colored circle, centered rating number in white (e.g. "4.9"). No category icon.
 - **Selected:** enlarges to ~40px with drop shadow.
@@ -299,7 +317,7 @@ After a successful search:
 
 Pick hex values from the existing palette; verify WCAG contrast for white-on-color (AA at minimum).
 
-Built on `Mapbox.MarkerView` for parity with the existing Places tab. Manual perf spot-check during impl: 20 markers on a low-end Android. If FPS drops below ~50, refactor to `ShapeSource` + `SymbolLayer`.
+Built on the chosen Google Maps marker API. Manual perf spot-check during impl: 20 custom markers on a low-end Android. If FPS drops below ~50, simplify marker rendering before launch.
 
 ---
 
@@ -576,7 +594,7 @@ assets/svg/
 
 components/
   discover-markers/
-    discover-markers.tsx               ← NEW: 3-bucket Mapbox markers
+    discover-markers.tsx               ← NEW: 3-bucket Google Maps markers
   discover-place-sheet/
     discover-place-sheet.tsx           ← NEW: detail sheet
   filter-sheet/
@@ -594,6 +612,7 @@ lib/
   analytics.ts                         ← MODIFY: new event types
   feature-flags.ts                     ← MODIFY: discover_enabled wrapper
 
+app.config.ts                          ← MODIFY: add Google Maps SDK keys/config plugin for chosen RN Google Maps library
 supabase/
   migrations/
     <ts>_add_discover_search_counter.sql   ← NEW
@@ -605,11 +624,19 @@ types/
   index.ts                             ← MODIFY: DiscoverPlace, DiscoverPhoto
 
 metro.config.js                        ← MODIFY (if SVG transformer chosen)
-package.json                           ← MODIFY: react-native-svg-transformer if SVG transformer chosen
+package.json                           ← MODIFY: add React Native Google Maps library; add react-native-svg-transformer if SVG transformer chosen
 locales/en.json                        ← MODIFY: discover + filters.untagged
 locales/es.json                        ← MODIFY: mirror
 docs/prd.md                            ← MODIFY: reframe "not a discovery engine"
 ```
+
+### Native/config dependencies
+
+- Add a Google Maps React Native integration compatible with Expo SDK 54 and EAS dev clients. Candidate: `react-native-maps`, pending tech-lead validation.
+- Add required Google Maps SDK API keys to EAS environment variables and read them statically in `app.config.ts`.
+- Restrict Maps SDK keys by iOS bundle identifier and Android package name for all variants (`development`, `preview`, `production`).
+- Keep the existing Google Places API key server-side for `discover-search` and `discover-photo-urls`; do not expose unrestricted Places keys in the client bundle.
+- Confirm whether the current Google Places autocomplete/details keys used by the Add flow can remain as-is or should be separated from the new Maps SDK keys.
 
 ---
 
@@ -623,7 +650,8 @@ Explicitly accepted gaps. Track for follow-up.
 4. **No retry-with-backoff** on Edge Function calls — users retry manually by tapping send again.
 5. **`regionCode` not passed** to Google Text Search. Acceptable for v1; revisit if international result quality is poor.
 6. **Location denied/default city behavior.** Do not block search when location is denied. Instead, allow the user to search with explicit geography in the query ("coffee in Paris") and show a non-blocking prompt to enable location for better nearby results. If the map uses Madrid as a display fallback, do not send Madrid as `locationBias` unless the user is actually there.
-7. **Google Places attribution/compliance.** Needs further investigation before implementation continues. Confirm whether Google Places results, ratings, photos, and attribution can be displayed on a Mapbox map, what Google attribution is required beyond photo author attribution, and whether any European search-result ranking disclosures apply.
+7. **Two map providers.** Discover now introduces Google Maps while Places stays on Mapbox. This avoids the Google Places-on-Mapbox compliance problem but adds native setup, API-key, visual consistency, and QA complexity.
+8. **Google attribution/compliance details.** The core map-provider decision is resolved by using Google Maps for Discover, but implementation still needs to preserve Google Maps attribution/logo visibility, photo attribution, and any applicable European search-result disclosure requirements.
 
 ---
 
@@ -633,11 +661,13 @@ Explicitly accepted gaps. Track for follow-up.
 - `npm run typecheck` — clean
 - `npm run lint` — clean
 - `npm run check:i18n` — clean
+- EAS/dev-client build succeeds on iOS and Android after adding the Google Maps native dependency/config.
 
 ### Manual test flow (premium internal account)
 - [ ] Open app → lands on Places tab (not Discover).
 - [ ] Discover tab visible as leftmost tab → tap it.
-- [ ] Empty state: map centered on location, pill at top with MapVault logo + "I'm looking for...", no arrow.
+- [ ] Empty state: Google Map centered on location, pill at top with MapVault logo + "I'm looking for...", no arrow.
+- [ ] Google Maps logo/attribution is visible and not covered by the search pill, tab bar, overlays, or safe area.
 - [ ] Tap pill → overlay animates input to center, keyboard opens, send arrow fades in, hint visible.
 - [ ] Type "best coffee shop in Lavapiés" → tap send → spinner → overlay dismisses → 20 markers fit on map → pill shows query + ✕.
 - [ ] Tap a marker → marker enlarges → detail sheet opens with name, stars+rating+count, "Cafe · $$", "Open · Closes 22:00", Directions, Save, 3-photo carousel with attribution overlays.
@@ -652,6 +682,7 @@ Explicitly accepted gaps. Track for follow-up.
 
 ### Edge cases
 - [ ] Location permission denied → map may show a fallback center, search still works without sending fallback coordinates as `locationBias`, and the UI shows a non-blocking prompt to enable location for better nearby results.
+- [ ] Google Map fails to load or Maps SDK key is invalid → Discover shows a clear unavailable/error state and does not attempt to render Places markers on the Mapbox Places map.
 - [ ] Google returns 0 results → overlay dismisses, banner shows "No results for '...'", pill keeps query.
 - [ ] Network error during search → overlay stays, inline error, send arrow restored, retry works.
 - [ ] Place has no photos → carousel hidden.
@@ -680,5 +711,7 @@ Explicitly accepted gaps. Track for follow-up.
 - [ ] Privacy policy updated with query-collection disclosure before release.
 - [ ] iOS App Store privacy nutrition labels updated on next submission based on final analytics design. If raw query text is only collected anonymously, confirm whether it is disclosed as not linked to identity.
 - [ ] Account deletion → confirm PostHog data for that distinct_id is purged.
-- [ ] Google Places attribution/compliance investigation completed before implementation continues.
+- [ ] Google Maps logo/attribution visible on Discover map in empty, overlay, results, and detail-sheet states.
+- [ ] Confirm no Google Places results are shown on the Mapbox Places map.
+- [ ] Confirm any applicable Google/EEA search-result disclosure requirements for Places Text Search are satisfied.
 - [ ] Photo attribution `displayName` visible on every photo; tap opens author URI.
