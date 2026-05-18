@@ -1,6 +1,6 @@
 # PRD: Discover Feature
 
-**Status:** Pending Maps SDK billing spike (see Pre-conditions). Otherwise ready for tech-lead review — Google Maps implementation path
+**Status:** ✅ Ready for tech-lead review — Maps SDK billing spike passed 2026-05-18
 **Date:** 2026-05-16
 **Author:** Design session with Patrick Alvarez
 **Revision:** v3 — post-PM-review decisions baked in
@@ -34,6 +34,27 @@ If the spike fails, Discover is held until one of:
 - (c) The feature is reframed as Mapbox-on-Discover, and Google Places attribution risk is independently legal-reviewed.
 
 Tech lead may also evaluate `expo-maps` as an alternative library if `react-native-maps` does not pass.
+
+### Spike result — 2026-05-18 ✅ PASSED
+
+**Library tested:** `react-native-maps` v1.20.1 with `provider={PROVIDER_GOOGLE}`, `mapType="standard"`
+**Expo SDK:** 54 (Expo Router, local `npx expo run:ios` / `run:android`)
+**Test:** Physical iOS device + physical Android device. Map opened repeatedly, 20 markers rendered, camera panned/zoomed.
+
+**GCP traffic (`mapvault-test` project, 2026-05-18):**
+
+| Service | Observed |
+|---|---|
+| `maps-ios-backend.googleapis.com` | ✅ Yes (Maps SDK for iOS — free tier) |
+| `maps-android-backend.googleapis.com` | ✅ Yes (Maps SDK for Android — free tier) |
+| Maps JavaScript API | ❌ None |
+| Dynamic Maps | ❌ None |
+| Map Tiles API | ❌ None |
+| Street View Static API | ❌ None |
+| Cloud-based Maps Styling | ❌ None |
+| Any other paid rendering SKU | ❌ None |
+
+**Conclusion:** All map traffic billed to free-tier Maps SDK for iOS and Maps SDK for Android SKUs. Zero paid rendering charges. `react-native-maps` with `PROVIDER_GOOGLE` is confirmed as the correct library choice for Discover. PRD is unblocked for tech-lead review.
 
 ---
 
