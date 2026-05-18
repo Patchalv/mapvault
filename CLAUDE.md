@@ -180,3 +180,8 @@ functions/ ← Edge Functions
 
 Skills (invoked automatically): add-screen, new-component, add-edge-function, create-migration, revenuecat, tanstack-query-hook, rls-policy
 Commands: /build, /add-screen, /add-edge-function, /fix-issue, /changelog, /ios-preflight, /android-preflight, /update, /milestone, /sync-types
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
