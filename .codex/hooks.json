@@ -1,0 +1,45 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/patrickalvarez/Code/mapvault-collection/mapvault/.codex/hooks/block-env-edits.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/patrickalvarez/Code/mapvault-collection/mapvault/.codex/hooks/block-lock-files.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/patrickalvarez/Code/mapvault-collection/mapvault/.codex/hooks/block-generated-files.sh'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/patrickalvarez/Code/mapvault-collection/mapvault/.codex/hooks/tsc-check.sh'",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
