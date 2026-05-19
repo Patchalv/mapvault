@@ -67,7 +67,7 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - Invite links use Universal Links: `https://mapvault.app/invite/[token]`
 - Custom scheme `mapvault://` is kept as fallback (used by web fallback page)
 - iOS: `associatedDomains` in `app.config.ts`; Android: `intentFilters` in `app.config.ts`
-- Tab layout: `(tabs)/` with three tabs: explore, add, profile
+- Tab layout: `(tabs)/` with three tabs: explore, add, settings
 - Auth routing: `(auth)/` group for unauthenticated screens
 
 ## Analytics
@@ -93,8 +93,8 @@ app/ ← Expo Router file-based routes
 (auth)/ ← Unauthenticated layout
 (tabs)/ ← Authenticated tab layout
 explore/ ← Map/list view
-add/ ← Add place flow
-profile/ ← Profile & map management
+add/ ← Add place flow (index + save sub-screen)
+settings/ ← Settings tab (profile, maps, membership, paywall, delete-account)
 invite/[token].tsx ← Universal Link / deep link handler
 components/ ← Shared UI components
 hooks/ ← Custom hooks (data fetching, auth, etc.)
@@ -161,6 +161,8 @@ functions/ ← Edge Functions
 - `docs/universal-links-website.md` — AASA, assetlinks.json, and invite fallback page specs for mapvault.app
 - `docs/freemium-roles.md` — Freemium tiers, three-role system, and permission matrices
 - `docs/mailerlite.md` — MailerLite integration: sync paths, groups, backfill script, error handling
+- `docs/membership-page.md` — Membership screen PRD (free/premium layouts, usage progress bar)
+- `docs/BRANDING-ASSETS.md` — Brand colors, icon dimensions, and Expo config keys for app assets
 - `docs/troubleshooting.md` — Common issues and fixes
 - Read these before starting any new milestone
 
@@ -180,3 +182,8 @@ functions/ ← Edge Functions
 
 Skills (invoked automatically): add-screen, new-component, add-edge-function, create-migration, revenuecat, tanstack-query-hook, rls-policy
 Commands: /build, /add-screen, /add-edge-function, /fix-issue, /changelog, /ios-preflight, /android-preflight, /update, /milestone, /sync-types
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
