@@ -14,6 +14,7 @@ import {
   purchasePackage,
   restorePurchases,
   isPremium,
+  isRevenueCatNetworkError,
 } from '@/lib/revenuecat';
 import type { Profile } from '@/types';
 
@@ -69,7 +70,14 @@ export function useRevenueCat() {
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
         if (message.toLowerCase().includes('already in progress')) return; // known Android race
-        Sentry.captureException(error, { tags: { context: 'revenuecat_login' } });
+        if (isRevenueCatNetworkError(error)) {
+          track('revenuecat_login_network_error', {}); // transient device connectivity — not actionable
+          return;
+        }
+        Sentry.captureException(error, {
+          tags: { context: 'revenuecat_login' },
+          extra: { userId },
+        });
       })
       .finally(() => {
         isIdentifyingRef.current = false;
@@ -118,13 +126,14 @@ export function useRevenueCat() {
       const key = `error:${offerings.errorUpdatedAt}`;
       if (reportedKeyRef.current === key) return;
       reportedKeyRef.current = key;
-      if (IS_PRODUCTION) {
+      const isNetworkError = isRevenueCatNetworkError(offerings.error);
+      if (IS_PRODUCTION && !isNetworkError) {
         Sentry.captureException(offerings.error, {
           tags: { context: 'rc_offerings', platform: Platform.OS },
           extra: { userId, revenueCatReady },
         });
       }
-      track('paywall_offerings_load_failed', { reason: 'error' });
+      track('paywall_offerings_load_failed', { reason: isNetworkError ? 'network' : 'error' });
       return;
     }
     const data = offerings.data;

@@ -128,7 +128,7 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 |---|---|---|---|
 | `review_prompted` | In-app review dialog triggered | `trigger`: `'place_visited' \| 'places_saved_milestone' \| 'directions_after_filter'` | `hooks/use-app-review.ts` |
 
-### Payments (4 events)
+### Payments (6 events)
 
 | Event | When | Properties | File |
 |---|---|---|---|
@@ -136,8 +136,10 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 | `purchase_started` | User taps Subscribe | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_completed` | Purchase succeeds | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_failed` | Purchase fails or is cancelled | `reason`: `'cancelled' \| 'error'` | `app/(tabs)/profile/paywall.tsx` |
+| `paywall_offerings_load_failed` | RC offerings query fails or returns empty | `reason`: `'error' \| 'empty' \| 'not_configured' \| 'network'` | `hooks/use-revenuecat.ts` |
+| `revenuecat_login_network_error` | RC `logIn()` fails with a network/connectivity error | _(none)_ | `hooks/use-revenuecat.ts` |
 
-**Total: 30 events**
+**Total: 32 events**
 
 ## Rules for Adding New Events
 
