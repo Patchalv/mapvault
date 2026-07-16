@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Purchases, {
   LOG_LEVEL,
+  PURCHASES_ERROR_CODE,
   type CustomerInfo,
   type PurchasesOfferings,
   type PurchasesPackage,
@@ -89,4 +90,12 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
 
 export function isPremium(customerInfo: CustomerInfo): boolean {
   return !!customerInfo.entitlements.active['premium'];
+}
+
+export function isRevenueCatNetworkError(error: unknown): boolean {
+  const code = (error as { code?: string })?.code;
+  return (
+    code === PURCHASES_ERROR_CODE.NETWORK_ERROR ||
+    code === PURCHASES_ERROR_CODE.OFFLINE_CONNECTION_ERROR
+  );
 }
