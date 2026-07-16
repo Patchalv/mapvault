@@ -26,13 +26,16 @@ function customerBody(active: boolean) {
   };
 }
 
-function withStubbedFetch(responses: Array<() => Response>, run: () => Promise<void>) {
+function withStubbedFetch(
+  responses: Array<() => Response | Promise<Response>>,
+  run: () => Promise<void>,
+) {
   const originalFetch = globalThis.fetch;
   let call = 0;
-  globalThis.fetch = ((..._args: unknown[]) => {
+  globalThis.fetch = (async (..._args: unknown[]) => {
     const factory = responses[call] ?? responses[responses.length - 1];
     call += 1;
-    return Promise.resolve(factory());
+    return factory();
   }) as typeof fetch;
 
   return run().finally(() => {
@@ -72,6 +75,58 @@ Deno.test("exhausts retries on repeated 503 and returns ok:false without throwin
         PREMIUM_ENTITLEMENT_ID,
       );
       assertEquals(result.ok, false);
+    },
+  );
+});
+
+Deno.test("retries once on a network error (TypeError) and succeeds", async () => {
+  let calls = 0;
+  await withStubbedFetch(
+    [
+      () => {
+        calls += 1;
+        throw new TypeError("network error");
+      },
+      () => {
+        calls += 1;
+        return jsonResponse(200, customerBody(true));
+      },
+    ],
+    async () => {
+      const result = await checkCustomerActivePremiumWithRetry(
+        "cust_1",
+        PROJECT_ID,
+        RC_KEY,
+        PREMIUM_ENTITLEMENT_ID,
+      );
+      assertEquals(result, { ok: true, active: true });
+      assertEquals(calls, 2);
+    },
+  );
+});
+
+Deno.test("retries once on a timeout (DOMException) and succeeds", async () => {
+  let calls = 0;
+  await withStubbedFetch(
+    [
+      () => {
+        calls += 1;
+        throw new DOMException("timed out", "TimeoutError");
+      },
+      () => {
+        calls += 1;
+        return jsonResponse(200, customerBody(true));
+      },
+    ],
+    async () => {
+      const result = await checkCustomerActivePremiumWithRetry(
+        "cust_1",
+        PROJECT_ID,
+        RC_KEY,
+        PREMIUM_ENTITLEMENT_ID,
+      );
+      assertEquals(result, { ok: true, active: true });
+      assertEquals(calls, 2);
     },
   );
 });

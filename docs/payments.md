@@ -72,10 +72,9 @@ The webhook is the realtime path. The drift health check is the out-of-band back
 
 **What it does:**
 
-1. Lists every RevenueCat customer for the project (paginated via `starting_after`, 100 per page).
-2. Reads `id, entitlement` from every `profiles` row.
-3. Classifies each user into one of three drift categories. Healthy users are not reported.
-4. If drift > 0, emits **one** Sentry event with a stable fingerprint so consecutive runs collapse into a single issue.
+1. Reads `id, entitlement` from every `profiles` row, then looks up each user's RevenueCat state individually (`GET /v2/projects/{id}/customers/{customer_id}`) — see the "Why no orphan category?" note below for why this isn't a bulk RC customer listing.
+2. Classifies each user into one of three drift categories. Healthy users are not reported.
+3. If drift > 0, emits **one** Sentry event with a stable fingerprint so consecutive runs collapse into a single issue.
 
 **Drift categories:**
 

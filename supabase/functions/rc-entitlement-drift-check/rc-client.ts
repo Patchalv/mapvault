@@ -1,6 +1,6 @@
 // RevenueCat v2 API client for the drift-check job, kept dependency-free
-// (no Sentry/Supabase imports) so index.test.ts can exercise the retry and
-// fault-isolation logic without pulling in the full edge function runtime.
+// (no Sentry/Supabase imports) so rc-client.test.ts can exercise the retry
+// and fault-isolation logic without pulling in the full edge function runtime.
 
 const RC_API_BASE = "https://api.revenuecat.com/v2";
 const RC_CUSTOMER_CHECK_MAX_ATTEMPTS = 2;

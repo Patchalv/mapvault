@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: denoland/setup-deno@v2
         with:
@@ -26,7 +28,8 @@ jobs:
       # package.json on every resolve; that's expected and harmless since
       # CI never commits the checkout back.
       #
-      # --allow-net is all today's tests need (rc-client.test.ts only stubs
-      # fetch). If a future test reads Deno.env or touches the filesystem,
-      # this will need --allow-env / --allow-read added.
-      - run: deno test --allow-net supabase/functions
+      # No --allow-net: rc-client.test.ts fully replaces globalThis.fetch
+      # rather than making real network calls, so no permissions are needed
+      # today. If a future test hits a real network/filesystem/env, add the
+      # specific flag it needs rather than granting broadly up front.
+      - run: deno test supabase/functions
