@@ -1,41 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as Sentry from "npm:@sentry/node";
+import {
+  classifyProfilesDrift,
+  resolvePremiumEntitlementId,
+} from "./rc-client.ts";
 
 Sentry.init({
   dsn: Deno.env.get("SENTRY_DSN"),
   tracesSampleRate: 0,
 });
 
-const RC_API_BASE = "https://api.revenuecat.com/v2";
 const JOB_NAME = "rc-entitlement-drift-check";
 const MAX_EXTRA_IDS = 50;
 
-interface RcEntitlement {
-  id: string;
-  lookup_key: string;
-}
+serve(handler);
 
-interface RcCustomerActiveEntitlement {
-  entitlement_id: string;
-  // expires_at is intentionally not checked client-side — we trust RC's
-  // server-side active filter, which keeps in-grace-period entitlements active.
-  expires_at: number | null;
-}
-
-interface RcCustomer {
-  id: string;
-  active_entitlements?: {
-    items?: RcCustomerActiveEntitlement[];
-  };
-}
-
-interface RcListResponse<T> {
-  items: T[];
-  next_page: string | null;
-}
-
-serve(async (req) => {
+async function handler(req: Request): Promise<Response> {
   const runAt = new Date().toISOString();
 
   try {
@@ -133,27 +114,26 @@ serve(async (req) => {
       // unreliable. The webhook's `revenuecat_webhook_user_not_found`
       // captures one half of that gap (RC event for an unknown profile) and
       // orphans from already-deleted accounts are not operationally urgent.
-      const driftPremiumMissing: string[] = [];
-      const driftPremiumStale: string[] = [];
-
-      for (const profile of profiles) {
-        const rcActivePremium = await isCustomerActivePremium(
-          profile.id,
+      const { driftPremiumMissing, driftPremiumStale, driftCheckFailed } =
+        await classifyProfilesDrift(
+          profiles,
           projectId,
           rcKey,
           premiumEntitlementId,
+          (profileId, error) => {
+            console.error(JSON.stringify({
+              event: "rc_customer_check_failed",
+              job: JOB_NAME,
+              profile_id: profileId,
+              error,
+            }));
+          },
         );
-
-        if (profile.entitlement === "premium" && !rcActivePremium) {
-          driftPremiumStale.push(profile.id);
-        } else if (profile.entitlement === "free" && rcActivePremium) {
-          driftPremiumMissing.push(profile.id);
-        }
-      }
 
       const countMissing = driftPremiumMissing.length;
       const countStale = driftPremiumStale.length;
       const driftCount = countMissing + countStale;
+      const countFailed = driftCheckFailed.length;
 
       // 6. Single Sentry event when drift > 0; stable fingerprint collapses
       // consecutive runs into one issue. No event on the healthy path —
@@ -180,6 +160,30 @@ serve(async (req) => {
         await Sentry.flush(2000);
       }
 
+      // 7. Separate signal for runs with incomplete coverage (RC lookups that
+      // failed even after retry). Distinct fingerprint from the drift event
+      // above so the two never collapse into or suppress each other — a run
+      // can have both real drift AND some unchecked profiles at once. The
+      // next scheduled run re-checks every profile from scratch, so no
+      // backfill is needed once failed_count returns to 0.
+      if (countFailed > 0) {
+        Sentry.captureMessage("rc_drift_check_partial_failure", {
+          level: "warning",
+          fingerprint: ["rc-drift-check-partial-failure"],
+          tags: {
+            function: JOB_NAME,
+            context: "rc_drift_check_partial_failure",
+            failed_count: String(countFailed),
+            profile_count: String(profiles.length),
+          },
+          extra: {
+            failed_profile_ids: driftCheckFailed.slice(0, MAX_EXTRA_IDS),
+            run_at: runAt,
+          },
+        });
+        await Sentry.flush(2000);
+      }
+
       console.log(JSON.stringify({
         event: "drift_check_complete",
         job: JOB_NAME,
@@ -187,11 +191,12 @@ serve(async (req) => {
         drift_count: driftCount,
         count_missing: countMissing,
         count_stale: countStale,
+        failed_count: countFailed,
         supabase_profile_count: profiles.length,
       }));
 
       return new Response(
-        JSON.stringify({ drift_count: driftCount }),
+        JSON.stringify({ drift_count: driftCount, failed_count: countFailed }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     } finally {
@@ -217,53 +222,4 @@ serve(async (req) => {
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
-});
-
-async function resolvePremiumEntitlementId(
-  projectId: string,
-  rcKey: string,
-): Promise<string | null> {
-  // MapVault has one entitlement today (lookup_key="premium"). If the project
-  // ever has more than 100 entitlements, this needs pagination via
-  // starting_after — but well before that point, the data model has changed
-  // enough that the drift check itself should be re-evaluated.
-  const res = await fetch(
-    `${RC_API_BASE}/projects/${projectId}/entitlements?limit=100`,
-    {
-      headers: { Authorization: `Bearer ${rcKey}` },
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`rc_list_entitlements_${res.status}`);
-  }
-  const data = (await res.json()) as RcListResponse<RcEntitlement>;
-  return data.items.find((e) => e.lookup_key === "premium")?.id ?? null;
-}
-
-async function isCustomerActivePremium(
-  customerId: string,
-  projectId: string,
-  rcKey: string,
-  premiumEntitlementId: string,
-): Promise<boolean> {
-  const res = await fetch(
-    `${RC_API_BASE}/projects/${projectId}/customers/${customerId}`,
-    {
-      headers: { Authorization: `Bearer ${rcKey}` },
-      signal: AbortSignal.timeout(10_000),
-    },
-  );
-  // 404 = customer has no RC record at all. That's not "drift" by itself;
-  // a free-tier Supabase user who never went near payments will look like
-  // this, which is the healthy state. Treat as "not active premium".
-  if (res.status === 404) {
-    return false;
-  }
-  if (!res.ok) {
-    throw new Error(`rc_get_customer_${res.status}`);
-  }
-  const customer = (await res.json()) as RcCustomer;
-  const items = customer.active_entitlements?.items ?? [];
-  return items.some((e) => e.entitlement_id === premiumEntitlementId);
 }
