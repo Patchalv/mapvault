@@ -1,0 +1,32 @@
+name: Deno Tests
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/deno-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # deno.lock is a real, committed lockfile (it also pins
+      # scripts/backfill-mailerlite.ts's esm.sh imports) — deliberately not
+      # using --no-lock here so this step verifies those hashes. Deno also
+      # rewrites the lockfile's npm-workspace section to reflect the root
+      # package.json on every resolve; that's expected and harmless since
+      # CI never commits the checkout back.
+      #
+      # --allow-net is all today's tests need (rc-client.test.ts only stubs
+      # fetch). If a future test reads Deno.env or touches the filesystem,
+      # this will need --allow-env / --allow-read added.
+      - run: deno test --allow-net supabase/functions

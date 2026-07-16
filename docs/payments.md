@@ -93,10 +93,12 @@ The Sentry event's `extra` payload includes the first 50 affected ids per catego
 Every run prints one heartbeat to the Edge Function logs regardless of outcome:
 
 ```json
-{"event":"drift_check_complete","drift_count":0,"count_missing":0,"count_stale":0,"supabase_profile_count":47,"run_at":"..."}
+{"event":"drift_check_complete","drift_count":0,"count_missing":0,"count_stale":0,"failed_count":0,"supabase_profile_count":47,"run_at":"..."}
 ```
 
 `mcp__supabase__get_logs --service edge-function` is the fastest way to find it. A missing heartbeat means the cron job didn't run, which is itself a signal worth investigating.
+
+**Partial coverage (`rc_drift_check_partial_failure`):** each per-customer RC lookup gets one retry on a transient failure (5xx, network error, timeout) before being given up on; a customer that still fails isn't retried further within that run — it's excluded from drift classification and counted in `failed_count`. If any customers failed, a separate Sentry warning fires with fingerprint `rc-drift-check-partial-failure` (distinct from `rc-entitlement-drift`, so the two never suppress each other). No action needed beyond noting it — the next scheduled run re-checks every profile from scratch, so a skipped customer is covered again in ≤6 hours. Only worth investigating if `failed_count` is persistently non-zero across consecutive runs (points to a sustained RC-side or network problem, not a blip).
 
 **Operator runbook — drift event fires:**
 
