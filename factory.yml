@@ -1,0 +1,65 @@
+version: 1
+
+# GitHub Actions JOB names — the keys under `jobs:` in .github/workflows/,
+# not workflow names. Both of these run on every pull request.
+#
+# `deno-test` is deliberately absent: it is filtered to supabase/functions/**,
+# so on a pull request that touches nothing there the job never runs, and a
+# required check that never runs fails verification at its deadline.
+checks:
+  - lint-typecheck
+  - test
+
+conventions: |
+  Expo (React Native) + Expo Router + Supabase + Mapbox + Google Places.
+  TypeScript strict, no `any`. Read AGENTS.md and CLAUDE.md at the repo root
+  first — they are the house rules and they are detailed.
+
+  Install and gate:
+  - npm, and `npm ci` — the lockfile is package-lock.json.
+  - `npm run lint` (expo lint), `npm run typecheck` (tsc --noEmit), `npm test` (jest).
+  - A husky pre-commit hook runs lint, typecheck and `npm run check:i18n` on
+    every commit, so a commit is slow and will fail outright if any of the three
+    fails. That is the hook working, not the workspace being broken.
+
+  Layout and style:
+  - Routes are file-based under app/; components/, hooks/, lib/, locales/.
+  - Always import through the `@/` alias. Never a relative import that crosses
+    a directory.
+  - kebab-case filenames, PascalCase components, functional components only.
+  - Styling is NativeWind `className`. Never StyleSheet.create.
+  - Data fetching goes through a hook in hooks/ wrapping TanStack Query.
+
+  Tests:
+  - jest with the jest-expo preset, colocated as `lib/thing.ts` ->
+    `lib/thing.test.ts`. Fixtures live in test-utils/fixtures.ts.
+  - Edge Function tests are Deno, under supabase/functions/, and run in a
+    separate workflow.
+
+  i18n is enforced, and this is the most common way a commit fails here:
+  - Every user-facing string goes in BOTH locales/en.json and locales/es.json
+    under the same key, then is read with `t('namespace.key')`.
+  - `npm run check:i18n` compares the two files key for key and the pre-commit
+    hook runs it.
+
+  Do not touch without saying so in your verdict: app.config.ts, eas.json, and
+  anything under .github/workflows/ (the last of these you cannot push at all).
+  A change to native configuration or to a native dependency changes how this
+  app has to be released, and that decision is the human's.
+
+# No extra egress needed: `npm ci`, lint, typecheck and jest all run against
+# the package registry alone, measured 2026-09-01 on a clean checkout.
+network: []
+
+# Requests, resolved as an intersection with the factory's own configuration.
+# - deps-update: dependency work is ordinary here. Safe now that
+#   `runtimeVersion.policy` is `fingerprint` — EAS refuses to serve an OTA
+#   update across a native change rather than shipping a crash.
+# - migrations-as-files: the repo carries 25 Supabase migrations and schema work
+#   is routine. Authoring only; a migration is never applied to any database.
+grants:
+  - deps-update
+  - migrations-as-files
+
+# Empty: the factory's defaults apply. Anything here could only lower them.
+budgets: {}
