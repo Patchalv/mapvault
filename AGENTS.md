@@ -182,3 +182,147 @@ functions/ ← Edge Functions
 
 Skills (invoked automatically): add-screen, new-component, add-edge-function, create-migration, revenuecat, tanstack-query-hook, rls-policy
 Commands: /build, /add-screen, /add-edge-function, /fix-issue, /changelog, /ios-preflight, /android-preflight, /update, /milestone, /sync-types
+
+---
+
+## This repository is worked by an autonomous factory
+
+Some pull requests here are opened by **`beavify`**, a machine account
+driven by [dark-factory](https://github.com/Patchalv/dark-factory) — a lights-out system that turns a
+written ticket into a pull request ready for review. It runs on a cron and needs
+no prompting.
+
+**It never merges anything.** Every change it makes arrives as a pull request a
+human has to approve, and it cannot push to `main`, force-push, or
+delete a branch. Those are not policies it follows; they are actions its code
+cannot express.
+
+### Giving it work
+
+Open an issue and label it `state:ready`. The issue body needs two things or it
+is rejected before anything is spent:
+
+1. **A goal in prose** — what to build, not only what to accept.
+2. **An `## Acceptance criteria` heading** with at least one criterion under it.
+
+A rejected ticket gets a comment saying exactly what was missing. Fix it and
+re-apply `state:ready` to start a fresh run.
+
+Labels are how the factory reports where a run is. Do not hand-edit them to make
+something happen — only `state:ready` starts work.
+
+| Label | Meaning |
+|---|---|
+| `state:ready` | Waiting to be picked up. **You set this one.** A ticket blocked by an open issue stays here until its blockers close |
+| `state:in-progress` | A run is working on it |
+| `state:needs-human-input` | Escalated — it asked a question and is waiting. Answer **in a comment on the issue**; that is where it reads from |
+| `state:pr-ready` | Pull request open, waiting on human review |
+| `state:rejected-at-intake` | Refused before spending, with reasons in a comment |
+| `state:done` | Closed |
+| `run:stop` | **Kill switch.** Add it to an issue to stop that run |
+
+Only comments from repository collaborators with push access are read. A comment
+from anyone else — including bots — is seen, marked read, and never acted on.
+
+### Running a plan in order
+
+A `state:ready` ticket starts when its turn comes, and its turn is decided by
+GitHub's own issue dependencies. Link one issue as blocked by another — the
+Relationships panel on the issue — and the factory leaves it alone until every
+blocker has closed.
+
+That is how you hand it a plan as several tickets, mark them all Ready, and get
+them one at a time. Every pull request it opens says `Closes #N`, so merging one
+closes its ticket and the next becomes eligible within a minute or two.
+
+Three things to know:
+
+- **Link the blockers before you mark anything Ready.** In the window where a
+  ticket is Ready and its blocker is not yet linked, there is nothing to read
+  and the factory will start it.
+- **Any close satisfies a blocker, including "not planned".** If you abandon a
+  ticket mid-chain its dependents become eligible immediately, against plans
+  that assumed its work exists. Edit or close them too.
+- **Chains get less accurate the further down they go**, because the later
+  tickets were written against a repository the earlier ones have since changed.
+  Three to five is comfortable; fifteen is not.
+
+### The one rule that is easy to break by accident
+
+**Never commit to a `factory/...` branch.** A human commit on a run's branch
+permanently ends the factory's involvement with that run. It is one-way and
+there is no hand-back: the run stops working, stays open only to notice the
+eventual merge, and no amount of reverting brings it back.
+
+This is deliberate — if you have started editing the work yourself, the factory
+racing you is worse than it stopping. But it means "just fixing a typo" on its
+branch retires the run. If you want a change, request it in a pull request
+review and let the run make it, or take the branch over knowing the factory is
+done with it.
+
+### `factory.yml`
+
+At the repository root, read **from `main` only** — never from a
+working branch, so an agent blocked by a permission cannot edit the file on its
+own branch and grant itself the permission.
+
+```yaml
+checks:      # the GitHub Actions JOB names that must pass. Load-bearing
+conventions: # free text handed to the planning and implementation stages
+network:     # extra egress hosts the sandbox may reach
+grants:      # opt-in permissions
+budgets:     # may only ever LOWER the factory's own caps
+```
+
+Three things about it that are not obvious:
+
+- **`checks:` names Actions job names — the keys under `jobs:` in
+  `.github/workflows/`, not workflow names, not check names.** Renaming a job
+  without updating `factory.yml` in the same commit makes every run fail
+  verification while CI looks green. This repo's are:
+  `lint-typecheck` and `test`, both in `.github/workflows/lint-typecheck.yml`.
+- **`network:` and `grants:` are requests, not grants.** They resolve as an
+  intersection with the factory's own configuration, which lives in a repository
+  no agent pushes to. Adding a host here alone does nothing except produce a
+  warning. If a build needs a host it cannot reach, it has to be added on both
+  sides — say so, do not work around it.
+- **`budgets:` can only narrow.** A number above the factory's cap is ignored.
+
+### Working alongside it
+
+- The plan a run intends to follow is posted as a **comment on the issue** before
+  implementation starts. That is the cheapest place to redirect it.
+- The pull request description carries the **assumptions ledger** — every
+  judgement call the run made rather than escalating. Read it; it is usually
+  where a disagreement will be.
+- A run reviews its own work in an isolated session that sees only the ticket,
+  the plan, and the diff. It cannot see the implementer's reasoning, which is
+  the point, but it also means a pull request whose justification lives outside
+  the diff will read as unjustified.
+- CI is the only automated gate. Verify reads **GitHub Actions job conclusions**;
+  a third-party check reporting to the Checks API is invisible to it, however
+  green it looks here.
+
+### MapVault-specific things it has been told
+
+- **`deno-test` is not a required check, on purpose.** It is filtered to
+  `supabase/functions/**`, so on a pull request touching nothing there the job
+  never runs, and a required check that never runs fails verification at its
+  deadline. Edge Function work is therefore gated by the human reviewing it,
+  not by the factory.
+- **The i18n hook is the most common way its commits fail.** `check:i18n` runs
+  in the husky pre-commit hook and compares `locales/en.json` with
+  `locales/es.json` key for key. A new string in one file only will not commit.
+- **It holds `deps-update` and `migrations-as-files`.** So it may add an npm
+  dependency and may *author* a migration file. It never applies a migration to
+  any database, local or remote.
+- **It cannot build, submit or ship anything.** No EAS, App Store Connect or
+  Play credentials exist anywhere in the factory, and its sandbox can only reach
+  GitHub and package registries. Merging one of its pull requests puts code on
+  `main` and nothing else — every release is still `eas build` / `eas submit` /
+  `eas update` run by a human.
+- **Read the release type before the next OTA update.** `runtimeVersion.policy`
+  is `fingerprint`, so EAS will refuse to serve a JS bundle across a native
+  change rather than crashing users. That is a safety net, not a reason to skip
+  reading the diff: it is easier to misjudge "is this JS-only?" on a change
+  someone else wrote.
