@@ -157,12 +157,26 @@ eas update --branch production --environment production --message "Description o
 
 **When you need a new build:** New native module, Expo SDK upgrade, changes to `app.config.ts` native fields (permissions, entitlements, plugins), React Native version bump.
 
+### Runtime version policy
+
+`app.config.ts` uses `runtimeVersion.policy: "fingerprint"`. The runtime version is a hash of the native project, so any of the changes listed above moves it and `eas update` refuses to serve the bundle to older binaries instead of crashing them on launch. Under the old `sdkVersion` policy the runtime version only moved on an SDK bump, which let a bundle referencing native code that a shipped binary did not contain reach users.
+
+Check what a change did to the fingerprint before publishing:
+
+```bash
+# prints the full source list; the "hash" field is the runtime version
+npx expo-updates fingerprint:generate --platform ios | jq -r '.hash, (.sources | length)'
+```
+
+If the fingerprint moved, the change needs a build and a store release, not an OTA update.
+
 ## Pre-Deploy Checklist
 
 ### Before any deploy
 
 - [ ] `npx expo lint` passes
 - [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
 - [ ] App runs correctly on simulator/device
 
 ### Before Supabase migration push

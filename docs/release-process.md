@@ -121,4 +121,4 @@ App Store builds can't be rolled back once released. Options:
 
 - **Version** (`version` in app.config.ts): Semantic version shown to users (e.g., `1.0.0`). Update manually for major releases.
 - **Build number**: Auto-incremented by EAS on each production build. Don't set manually.
-- **Runtime version**: Tied to SDK version (`sdkVersion` policy). OTA updates only apply to builds with the same runtime version.
+- **Runtime version**: Computed from a fingerprint of the native project (`fingerprint` policy). OTA updates only apply to builds with the same runtime version, so any change to a native input — a new native module, a config plugin, a permission — moves the fingerprint and requires a new build before OTA reaches users again.
