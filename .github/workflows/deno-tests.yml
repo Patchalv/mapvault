@@ -10,7 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  # Named deno-test, not test: a check name has to be unique across workflows,
+  # and lint-typecheck.yml already publishes a "test" check for the Jest suite.
+  deno-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
