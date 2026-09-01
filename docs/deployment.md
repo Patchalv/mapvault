@@ -164,11 +164,25 @@ eas update --branch production --environment production --message "Description o
 Check what a change did to the fingerprint before publishing:
 
 ```bash
-# prints the full source list; the "hash" field is the runtime version
-npx expo-updates fingerprint:generate --platform ios | jq -r '.hash, (.sources | length)'
+# run for both platforms — a native change can move one fingerprint and not the other
+for platform in ios android; do
+  eas fingerprint:generate --environment production --platform "$platform" --json |
+    jq -r --arg platform "$platform" '"\($platform): \(.hash)"'
+done
 ```
 
-If the fingerprint moved, the change needs a build and a store release, not an OTA update.
+`--environment production` matters for the same reason it does on `eas update`: the fingerprint is computed from the resolved config, and without it the EAS-stored env vars are missing.
+
+Compare against the build that actually shipped:
+
+```bash
+eas build:list --platform ios --limit 1 --json --non-interactive |
+  jq -r '.[0] | "runtime: \(.runtime.version)  fingerprint: \(.fingerprint.hash)"'
+```
+
+Builds made under the old policy report `runtime: exposdk:54.0.0`; builds made after the switch report the fingerprint hash. A shipped build whose runtime is still `exposdk:*` cannot receive fingerprint-keyed updates at all — that is the gap the store release closes.
+
+If a fingerprint moved, that platform needs a build and a store release, not an OTA update — and decide per platform, not once for both.
 
 ## Pre-Deploy Checklist
 

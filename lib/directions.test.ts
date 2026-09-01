@@ -5,9 +5,12 @@ const LAT = 41.3874;
 const LNG = 2.1686;
 const GOOGLE_WEB = `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LNG}`;
 
-let canOpen: jest.SpyInstance;
-let openUrl: jest.SpyInstance;
-let actionSheet: jest.SpyInstance;
+let canOpen: jest.SpyInstance<Promise<boolean>, [url: string]>;
+let openUrl: jest.SpyInstance<Promise<unknown>, [url: string]>;
+let actionSheet: jest.SpyInstance<
+  void,
+  Parameters<typeof ActionSheetIOS.showActionSheetWithOptions>
+>;
 
 function installedSchemes(schemes: string[]) {
   canOpen.mockImplementation(async (url: string) =>

@@ -2,9 +2,16 @@ import type { PostHog } from 'posthog-react-native';
 
 type AnalyticsModule = typeof import('@/lib/analytics');
 
+// The module keeps its PostHog instance in module scope, so each test needs a
+// fresh copy. This has to be jest.isolateModules + require, not the async pair
+// with import(): under the jest-expo (CommonJS) transform a real dynamic import
+// throws "A dynamic import callback was invoked without
+// --experimental-vm-modules". The repo's ESM-only import rule is about app code
+// that Metro bundles; this is Jest's module registry.
 function loadAnalytics(): AnalyticsModule {
   let mod: AnalyticsModule;
   jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('@/lib/analytics');
   });
   return mod!;

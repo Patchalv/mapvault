@@ -1,4 +1,4 @@
-/* eslint-env jest */
+/* global jest */
 
 // Sentry's native module is unavailable under Jest, and none of these tests
 // assert on error reporting — stub the surface the app calls.

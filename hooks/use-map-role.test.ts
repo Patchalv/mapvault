@@ -7,7 +7,7 @@ jest.mock('@/hooks/use-maps', () => ({ useMaps: jest.fn() }));
 const mockUseMaps = useMaps as jest.MockedFunction<typeof useMaps>;
 
 function withMemberships(
-  memberships: Array<{ map_id: string; role: string }> | undefined,
+  memberships: { map_id: string; role: string }[] | undefined,
   isLoading = false,
 ) {
   mockUseMaps.mockReturnValue({

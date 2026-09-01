@@ -34,10 +34,14 @@ jest.mock('expo-constants', () => ({
 type RevenueCatModule = typeof import('@/lib/revenuecat');
 
 // The module keeps `isConfigured` in module scope, so each test needs a fresh
-// copy to control whether the SDK is configured.
-async function loadModule(): Promise<RevenueCatModule> {
+// copy to control whether the SDK is configured. jest.isolateModules + require
+// rather than the async pair with import(): under the jest-expo (CommonJS)
+// transform a real dynamic import throws "A dynamic import callback was invoked
+// without --experimental-vm-modules".
+function loadModule(): RevenueCatModule {
   let mod: RevenueCatModule;
   jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('@/lib/revenuecat');
   });
   return mod!;
@@ -59,19 +63,19 @@ beforeEach(() => {
 
 describe('isPremium', () => {
   it('is true when the premium entitlement is active', async () => {
-    const { isPremium } = await loadModule();
+    const { isPremium } = loadModule();
 
     expect(isPremium(customerInfo(['premium']))).toBe(true);
   });
 
   it('is false with no active entitlements', async () => {
-    const { isPremium } = await loadModule();
+    const { isPremium } = loadModule();
 
     expect(isPremium(customerInfo([]))).toBe(false);
   });
 
   it('is false when some other entitlement is active', async () => {
-    const { isPremium } = await loadModule();
+    const { isPremium } = loadModule();
 
     expect(isPremium(customerInfo(['legacy_pro']))).toBe(false);
   });
@@ -79,26 +83,26 @@ describe('isPremium', () => {
 
 describe('isRevenueCatNetworkError', () => {
   it('recognises NETWORK_ERROR', async () => {
-    const { isRevenueCatNetworkError } = await loadModule();
+    const { isRevenueCatNetworkError } = loadModule();
 
     expect(isRevenueCatNetworkError({ code: '10' })).toBe(true);
   });
 
   it('recognises OFFLINE_CONNECTION_ERROR', async () => {
-    const { isRevenueCatNetworkError } = await loadModule();
+    const { isRevenueCatNetworkError } = loadModule();
 
     expect(isRevenueCatNetworkError({ code: '35' })).toBe(true);
   });
 
   it('does not classify a store problem as a network error', async () => {
-    const { isRevenueCatNetworkError } = await loadModule();
+    const { isRevenueCatNetworkError } = loadModule();
 
     // STORE_PROBLEM_ERROR — a real failure that must still reach Sentry.
     expect(isRevenueCatNetworkError({ code: '2' })).toBe(false);
   });
 
   it('handles a thrown value with no code at all', async () => {
-    const { isRevenueCatNetworkError } = await loadModule();
+    const { isRevenueCatNetworkError } = loadModule();
 
     expect(isRevenueCatNetworkError(new Error('boom'))).toBe(false);
     expect(isRevenueCatNetworkError(undefined)).toBe(false);
@@ -107,7 +111,7 @@ describe('isRevenueCatNetworkError', () => {
 
 describe('configureRevenueCat', () => {
   it('configures the SDK anonymously and reports ready', async () => {
-    const mod = await loadModule();
+    const mod = loadModule();
 
     expect(mod.isRevenueCatReady()).toBe(false);
     mod.configureRevenueCat();
@@ -120,7 +124,7 @@ describe('configureRevenueCat', () => {
   });
 
   it('is idempotent — a second call does not reconfigure', async () => {
-    const mod = await loadModule();
+    const mod = loadModule();
 
     mod.configureRevenueCat();
     mod.configureRevenueCat();
@@ -131,7 +135,7 @@ describe('configureRevenueCat', () => {
 
 describe('purchase entry points when the SDK is not configured', () => {
   it('throws rather than calling into an unconfigured SDK on purchase', async () => {
-    const { purchasePackage } = await loadModule();
+    const { purchasePackage } = loadModule();
 
     await expect(purchasePackage({} as never)).rejects.toThrow(
       'RevenueCat is not configured',
@@ -140,27 +144,27 @@ describe('purchase entry points when the SDK is not configured', () => {
   });
 
   it('throws on restore', async () => {
-    const { restorePurchases } = await loadModule();
+    const { restorePurchases } = loadModule();
 
     await expect(restorePurchases()).rejects.toThrow('RevenueCat is not configured');
     expect(mockPurchases.restorePurchases).not.toHaveBeenCalled();
   });
 
   it('returns null offerings instead of throwing', async () => {
-    const { getOfferings } = await loadModule();
+    const { getOfferings } = loadModule();
 
     await expect(getOfferings()).resolves.toBeNull();
     expect(mockPurchases.getOfferings).not.toHaveBeenCalled();
   });
 
   it('returns null customer info instead of throwing', async () => {
-    const { getCustomerInfo } = await loadModule();
+    const { getCustomerInfo } = loadModule();
 
     await expect(getCustomerInfo()).resolves.toBeNull();
   });
 
   it('skips identify and log out silently', async () => {
-    const mod = await loadModule();
+    const mod = loadModule();
 
     await mod.identifyUser('user-1');
     await mod.logOutUser();
@@ -172,7 +176,7 @@ describe('purchase entry points when the SDK is not configured', () => {
 
 describe('identity when the SDK is configured', () => {
   it('logs the Supabase user id into RevenueCat', async () => {
-    const mod = await loadModule();
+    const mod = loadModule();
     mod.configureRevenueCat();
 
     await mod.identifyUser('user-1');
@@ -181,7 +185,7 @@ describe('identity when the SDK is configured', () => {
   });
 
   it('swallows log out errors so sign-out is never blocked', async () => {
-    const mod = await loadModule();
+    const mod = loadModule();
     mod.configureRevenueCat();
     mockPurchases.logOut.mockRejectedValueOnce(new Error('user is anonymous'));
 
