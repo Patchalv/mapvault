@@ -13,6 +13,7 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - `npx expo start --dev-client` — Start dev server (production bundle ID, for payments testing)
 - `npm run lint` — Run linter
 - `npm run typecheck` — TypeScript check (run after code changes)
+- `npm test` — Jest unit tests (`npm run test:watch` while iterating)
 - `eas build --profile <name> --platform <ios|android>` — Build (see `docs/builds.md` for the full profile matrix; common combos exposed as `npm run build:*` scripts)
 - `supabase db push` — Push migration to Supabase
 - `supabase functions deploy <name> --no-verify-jwt` — Deploy Edge Function to Supabase
@@ -59,6 +60,16 @@ Expo (React Native) + Supabase + Mapbox + Google Places API.
 - Mutations: invalidate related queries in `onSuccess`
 - Edge Function calls: `supabase.functions.invoke('fn-name', { body: {...} })`
 - Global defaults: `staleTime: 5 minutes`, `retry: 1` — set in the root `QueryClient` in `app/_layout.tsx`
+
+## Testing (Jest)
+
+- Runner: `jest-expo` preset — config in `jest.config.js`, global mocks in `jest.setup.js`
+- Test files are colocated with their source: `lib/revenuecat.ts` -> `lib/revenuecat.test.ts`
+- Fixture builders for Supabase join shapes live in `test-utils/fixtures.ts` — extend those rather than hand-rolling rows
+- Sentry and `expo-router` are mocked globally in `jest.setup.js`; mock anything else per file
+- Hooks are tested with `renderHook` from `@testing-library/react-native`; TanStack Query hooks need a `QueryClientProvider` wrapper with `retry: false` and a `client.clear()` in `afterEach` (a live cache keeps a GC timer open and the Jest worker will not exit)
+- Module-level state (`lib/revenuecat.ts`, `lib/analytics.ts`) needs `jest.isolateModules` to get a fresh copy per test
+- Edge Function tests are Deno, not Jest — they live under `supabase/functions/` and run in the `deno-tests` workflow
 
 ## Navigation (Expo Router)
 

@@ -157,12 +157,40 @@ eas update --branch production --environment production --message "Description o
 
 **When you need a new build:** New native module, Expo SDK upgrade, changes to `app.config.ts` native fields (permissions, entitlements, plugins), React Native version bump.
 
+### Runtime version policy
+
+`app.config.ts` uses `runtimeVersion.policy: "fingerprint"`. The runtime version is a hash of the native project, so any of the changes listed above moves it and `eas update` refuses to serve the bundle to older binaries instead of crashing them on launch. Under the old `sdkVersion` policy the runtime version only moved on an SDK bump, which let a bundle referencing native code that a shipped binary did not contain reach users.
+
+Check what a change did to the fingerprint before publishing:
+
+```bash
+# run for both platforms — a native change can move one fingerprint and not the other
+for platform in ios android; do
+  eas fingerprint:generate --environment production --platform "$platform" --json |
+    jq -r --arg platform "$platform" '"\($platform): \(.hash)"'
+done
+```
+
+`--environment production` matters for the same reason it does on `eas update`: the fingerprint is computed from the resolved config, and without it the EAS-stored env vars are missing.
+
+Compare against the build that actually shipped:
+
+```bash
+eas build:list --platform ios --limit 1 --json --non-interactive |
+  jq -r '.[0] | "runtime: \(.runtime.version)  fingerprint: \(.fingerprint.hash)"'
+```
+
+Builds made under the old policy report `runtime: exposdk:54.0.0`; builds made after the switch report the fingerprint hash. A shipped build whose runtime is still `exposdk:*` cannot receive fingerprint-keyed updates at all — that is the gap the store release closes.
+
+If a fingerprint moved, that platform needs a build and a store release, not an OTA update — and decide per platform, not once for both.
+
 ## Pre-Deploy Checklist
 
 ### Before any deploy
 
 - [ ] `npx expo lint` passes
 - [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
 - [ ] App runs correctly on simulator/device
 
 ### Before Supabase migration push

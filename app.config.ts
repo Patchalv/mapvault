@@ -182,8 +182,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   updates: {
     url: "https://u.expo.dev/1ec7ed48-2f17-4c59-9e71-0f5aea7ea1f7",
   },
+  // fingerprint recomputes the runtime version whenever a native input changes
+  // (a new native module, a config plugin, a permission), so `eas update` will
+  // not serve a bundle to a binary that lacks the native code it references.
+  // Changing this invalidates the runtime version of every binary already on a
+  // device: ship a new production build to both stores before OTA resumes.
   runtimeVersion: {
-    policy: "sdkVersion",
+    policy: "fingerprint",
   },
   experiments: {
     typedRoutes: true,

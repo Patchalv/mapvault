@@ -48,3 +48,6 @@ yarn-error.*
 .keys/
 .env.local
 .superpowers/
+
+# jest
+/coverage
