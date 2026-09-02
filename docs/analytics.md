@@ -132,14 +132,34 @@ Entitlement is synced as a person property (`entitlement: 'free' | 'premium'`) i
 
 | Event | When | Properties | File |
 |---|---|---|---|
-| `paywall_viewed` | Paywall screen mounts | `trigger`: `'map_limit' \| 'place_limit' \| 'invite_limit' \| 'profile_tap' \| 'profile_cta'` | `app/(tabs)/profile/paywall.tsx` |
+| `paywall_viewed` | Paywall screen mounts | `trigger`: `'map_limit' \| 'place_limit' \| 'invite_limit' \| 'profile_tap' \| 'profile_cta' \| 'settings_upgrade_cta'` | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_started` | User taps Subscribe | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_completed` | Purchase succeeds | _(none)_ | `app/(tabs)/profile/paywall.tsx` |
 | `purchase_failed` | Purchase fails or is cancelled | `reason`: `'cancelled' \| 'error'` | `app/(tabs)/profile/paywall.tsx` |
 | `paywall_offerings_load_failed` | RC offerings query fails or returns empty | `reason`: `'error' \| 'empty' \| 'not_configured' \| 'network'` | `hooks/use-revenuecat.ts` |
 | `revenuecat_login_network_error` | RC `logIn()` fails with a network/connectivity error | _(none)_ | `hooks/use-revenuecat.ts` |
 
-**Total: 32 events**
+### Settings (6 events)
+
+| Event | When | Properties | File |
+|---|---|---|---|
+| `settings_viewed` | Settings tab mounts | _(none)_ | `app/(tabs)/settings/index.tsx` |
+| `manage_maps_viewed` | Manage Maps screen mounts | _(none)_ | `app/(tabs)/settings/maps.tsx` |
+| `settings_upgrade_cta_tapped` | User taps the upgrade CTA in Settings | `entitlement`: `'free'` | `app/(tabs)/settings/index.tsx` |
+| `settings_map_switcher_opened` | User taps "My Map" to open the map switcher sheet | _(none)_ | `app/(tabs)/settings/index.tsx` |
+| `settings_rate_review_tapped` | User taps "Rate & Review" | _(none)_ | `app/(tabs)/settings/index.tsx` |
+| `settings_external_link_tapped` | User taps a legal/help link | `link`: `'privacy' \| 'terms' \| 'help'` | `app/(tabs)/settings/index.tsx` |
+
+### Membership (4 events)
+
+| Event | When | Properties | File |
+|---|---|---|---|
+| `membership_screen_viewed` | Membership screen mounts (once profile entitlement is known) | `plan`: `'free' \| 'premium'` | `app/(tabs)/settings/membership.tsx` |
+| `membership_upgrade_tapped` | User taps Upgrade on the Membership screen | `plan`: `'free' \| 'premium'` | `app/(tabs)/settings/membership.tsx` |
+| `membership_restore_tapped` | User taps Restore Purchases | `plan`: `'free' \| 'premium'` | `app/(tabs)/settings/membership.tsx` |
+| `membership_manage_subscription_tapped` | User taps Manage Subscription | `plan`: `'free' \| 'premium'` | `app/(tabs)/settings/membership.tsx` |
+
+**Total: 42 events**
 
 ## Rules for Adding New Events
 
