@@ -33,12 +33,19 @@ ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "description" ON table_name
   FOR SELECT USING (auth.uid() = user_id);
 
--- Always grant Data API access — without this the table is unreachable via
--- supabase-js/PostgREST even with RLS enabled and policies in place.
--- MapVault has no unauthenticated (anon) access; grant to authenticated only
--- unless the table is deliberately meant to be publicly readable.
+-- Always grant Data API access — without this the table returns a 42501
+-- permission-denied error via supabase-js/PostgREST even with RLS enabled
+-- and policies in place. MapVault has no unauthenticated (anon) access;
+-- grant to authenticated only unless the table is deliberately public.
 GRANT SELECT, INSERT, UPDATE, DELETE ON table_name TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON table_name TO service_role;
+
+-- If a specific column needs tighter protection than RLS gives (RLS is
+-- row-scoped, not column-scoped) — e.g. letting a user update their own row
+-- but not a sensitive column on it — narrow it the way map_members does:
+--   REVOKE UPDATE ON table_name FROM authenticated;
+--   GRANT UPDATE (safe_column) ON table_name TO authenticated;
+-- See supabase/migrations/20260304000001_freemium_roles_redesign.sql:207-210.
 ```
 
 5. **Verify the SQL** is valid by reviewing for:
@@ -56,10 +63,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON table_name TO service_role;
 - Every table MUST have RLS enabled — no exceptions
 - Every table MUST have an explicit Data API `GRANT` (see step 4) — Supabase enforces
   no-default-exposure on new tables in existing projects from **Oct 30 2026**; a table
-  created after that date with no grant will silently fail to reach via supabase-js
-  even though RLS and policies are correct. Grant `authenticated` (and `service_role`
-  for Edge Function access); only add `anon` if the table is intentionally public —
-  MapVault currently has no anon-accessible tables. Ref:
+  created after that date with no grant returns a `42501 permission denied` error via
+  supabase-js even though RLS and policies are correct. Grant `authenticated` (and
+  `service_role` for Edge Function access); only add `anon` if the table is
+  intentionally public — MapVault currently has no anon-accessible tables. This
+  restores what Supabase granted by default pre-policy; it does not widen access —
+  RLS remains the actual access boundary. For columns needing tighter-than-RLS
+  protection, narrow the grant per-column instead (see step 4's example). Ref:
   https://github.com/orgs/supabase/discussions/45329
 - Every table should have `id`, `created_at`, `updated_at` columns
 - Use `uuid` for primary keys, not serial/bigserial
