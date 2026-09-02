@@ -13,6 +13,12 @@ Personal reference for getting MapVault running on a fresh machine.
 | Supabase CLI | 2+ | `brew install supabase/tap/supabase` |
 | Xcode | Latest | Mac App Store (needed for simulator builds) |
 
+> Local iOS builds (`pod install`, Xcode simulator/device runs) require an
+> Apple Silicon (arm64) Mac. Not currently a risk for a solo Apple Silicon
+> dev, but worth knowing if anyone ever builds this on an Intel Mac. EAS
+> Build's iOS `resourceClass` (pinned in `eas.json`) is Apple Silicon only,
+> so this only matters for local builds.
+
 ## Clone & Install
 
 ```bash
