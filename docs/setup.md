@@ -13,6 +13,12 @@ Personal reference for getting MapVault running on a fresh machine.
 | Supabase CLI | 2+ | `brew install supabase/tap/supabase` |
 | Xcode | Latest | Mac App Store (needed for simulator builds) |
 
+> **Note:** Local iOS builds (Xcode/CocoaPods) should run on an Apple Silicon (arm64) Mac.
+> Not a hard requirement today — the app's only maps dependency (`@rnmapbox/maps`) doesn't
+> need it — but Google's Maps iOS SDKs drop Intel dev support from Q4 2026, which would
+> matter if a Google Maps dependency is ever added (see `docs/plans/discover-feature.md`).
+> EAS cloud builds are unaffected either way — see `docs/builds.md`.
+
 ## Clone & Install
 
 ```bash

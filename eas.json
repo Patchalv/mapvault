@@ -10,6 +10,9 @@
       "channel": "development",
       "env": {
         "APP_VARIANT": "development"
+      },
+      "ios": {
+        "resourceClass": "medium"
       }
     },
     "development:device": {
@@ -32,7 +35,8 @@
         "APP_VARIANT": "development"
       },
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "resourceClass": "medium"
       },
       "android": {
         "buildType": "apk"
@@ -44,6 +48,9 @@
       "env": {
         "APP_VARIANT": "preview",
         "EAS_BUILD": "true"
+      },
+      "ios": {
+        "resourceClass": "medium"
       }
     },
     "production": {
@@ -51,6 +58,9 @@
       "autoIncrement": true,
       "env": {
         "EAS_BUILD": "true"
+      },
+      "ios": {
+        "resourceClass": "medium"
       }
     }
   },
