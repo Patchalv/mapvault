@@ -32,11 +32,26 @@ ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
 -- Always create RLS policies
 CREATE POLICY "description" ON table_name
   FOR SELECT USING (auth.uid() = user_id);
+
+-- Always grant Data API access — without this the table returns a 42501
+-- permission-denied error via supabase-js/PostgREST even with RLS enabled
+-- and policies in place. MapVault has no unauthenticated (anon) access;
+-- grant to authenticated only unless the table is deliberately public.
+GRANT SELECT, INSERT, UPDATE, DELETE ON table_name TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON table_name TO service_role;
+
+-- If a specific column needs tighter protection than RLS gives (RLS is
+-- row-scoped, not column-scoped) — e.g. letting a user update their own row
+-- but not a sensitive column on it — narrow it the way map_members does:
+--   REVOKE UPDATE ON table_name FROM authenticated;
+--   GRANT UPDATE (safe_column) ON table_name TO authenticated;
+-- See supabase/migrations/20260304000001_freemium_roles_redesign.sql:207-210.
 ```
 
 5. **Verify the SQL** is valid by reviewing for:
    - RLS enabled on every new table
    - Appropriate RLS policies for SELECT, INSERT, UPDATE, DELETE
+   - Data API `GRANT` present for every new table (see Rules — required since Oct 30 2026)
    - Foreign key constraints where needed
    - Indexes on frequently queried columns
    - `NOT NULL` constraints on required fields
@@ -46,8 +61,22 @@ CREATE POLICY "description" ON table_name
 ## Rules
 
 - Every table MUST have RLS enabled — no exceptions
+- Every table MUST have an explicit Data API `GRANT` (see step 4) — Supabase enforces
+  no-default-exposure on new tables in existing projects from **Oct 30 2026**; a table
+  created after that date with no grant returns a `42501 permission denied` error via
+  supabase-js even though RLS and policies are correct. Grant `authenticated` (and
+  `service_role` for Edge Function access); only add `anon` if the table is
+  intentionally public — MapVault currently has no anon-accessible tables. This
+  restores what Supabase granted by default pre-policy; it does not widen access —
+  RLS remains the actual access boundary. For columns needing tighter-than-RLS
+  protection, narrow the grant per-column instead (see step 4's example). Ref:
+  https://github.com/orgs/supabase/discussions/45329
 - Every table should have `id`, `created_at`, `updated_at` columns
 - Use `uuid` for primary keys, not serial/bigserial
 - Foreign keys reference `uuid` columns
 - Never store API keys or secrets in the database
 - Migrations are append-only — never modify a pushed migration, create a new one
+- New-table cadence has been ~1 every 3 months historically (last two:
+  `20260221000001_create_tables.sql`, `20260513000001_enable_pg_cron_and_drift_check_lock.sql`).
+  If a table ships before this rule existed in a given working copy of this skill,
+  add the grant retroactively in a follow-up migration rather than assuming it's covered.
