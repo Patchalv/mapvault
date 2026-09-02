@@ -12,6 +12,13 @@ The `APP_VARIANT` environment variable drives bundle ID and app name via `app.co
 
 Different bundle IDs allow multiple variants to be installed side-by-side on the same device.
 
+## Build Infrastructure
+
+All iOS build profiles pin `ios.resourceClass: "medium"` in `eas.json` explicitly. This is
+EAS's default and has run on Apple Silicon (M-series) worker VMs since 2023 — pinned here so
+it's not left ambiguous. EAS cloud builds are unaffected by the developer's own Mac
+architecture; see `docs/setup.md` for local build requirements.
+
 ## Build Profiles
 
 All profiles are defined in `eas.json`. All profiles work for both iOS and Android except `development:simulator` (iOS only).
