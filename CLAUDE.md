@@ -175,6 +175,7 @@ functions/ ← Edge Functions
 - `docs/membership-page.md` — Membership screen PRD (free/premium layouts, usage progress bar)
 - `docs/BRANDING-ASSETS.md` — Brand colors, icon dimensions, and Expo config keys for app assets
 - `docs/troubleshooting.md` — Common issues and fixes
+- `docs/google-play-quality-2027.md` — Google Play's 2027 memory/bitmap/code-optimization and device-migration quality requirements
 - Read these before starting any new milestone
 
 ## i18n (Localization)
